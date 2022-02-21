@@ -1,0 +1,8 @@
+README.md
+Dockerfile
+coverage.xml
+report.xml
+cover.out
+shell.nix
+.envrc
+.gitignore

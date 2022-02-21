@@ -44,7 +44,7 @@ check:
   needs: [check]
   script:
   - go build -race -o shipper ./cmd/shipper
-  - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file shipper "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/shipper/$SHIPPER_VERSION/shipper'
+  - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file shipper "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/shipper/$SHIPPER_VERSION/shipper"'
 
 build-binary-unstable:
   extends: .build-and-upload-binary
