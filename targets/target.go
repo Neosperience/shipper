@@ -10,13 +10,18 @@ type CommitPayload struct {
 	Branch  string
 	Author  string
 	Message string
-	Files   map[string][]byte
+	Files   FileList
 }
+
+type FileList map[string][]byte
 
 // Target is a supported platform where we can push commits to
 type Target interface {
+	// Get retrieves a file from the repository
+
+	Get(path string) ([]byte, error)
 	// Commit creates a commit from a payload and pushes it to the target
-	Commit(data CommitPayload) error
+	Commit(data *CommitPayload) error
 }
 
 var (
@@ -30,15 +35,15 @@ func NewPayload(branch string, author string, message string) *CommitPayload {
 		Branch:  branch,
 		Author:  author,
 		Message: message,
-		Files:   make(map[string][]byte),
+		Files:   make(FileList),
 	}
 }
 
 // Add adds files to a commit payload
-func (payload *CommitPayload) Add(files map[string][]byte) error {
+func (list FileList) Add(files FileList) error {
 	// Check if we are ok to merge
 	for name := range files {
-		_, ok := payload.Files[name]
+		_, ok := list[name]
 		if ok {
 			return ErrFileAlreadyAdded
 		}
@@ -46,7 +51,7 @@ func (payload *CommitPayload) Add(files map[string][]byte) error {
 
 	// Merge maps
 	for name, content := range files {
-		payload.Files[name] = content
+		list[name] = content
 	}
 
 	return nil

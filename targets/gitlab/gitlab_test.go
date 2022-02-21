@@ -12,15 +12,11 @@ import (
 
 func TestCommit(t *testing.T) {
 	testKey := "test-key"
-	commit := targets.CommitPayload{
-		Branch:  "test-branch",
-		Author:  "test-author <author@example.com>",
-		Message: "Hello",
-		Files: map[string][]byte{
-			"textfile.txt":   []byte("test file"),
-			"binaryfile.jpg": {0xff, 0xd8, 0xff, 0xe0},
-		},
-	}
+	commit := targets.NewPayload("test-branch", "test-author <author@example.com>", "Hello")
+	commit.Files.Add(map[string][]byte{
+		"textfile.txt":   []byte("test file"),
+		"binaryfile.jpg": {0xff, 0xd8, 0xff, 0xe0},
+	})
 
 	// Setup test HTTP server/client
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

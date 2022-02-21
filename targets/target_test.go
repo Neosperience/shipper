@@ -43,19 +43,19 @@ func TestSplitAuthor(t *testing.T) {
 }
 
 func TestPayloadAdd(t *testing.T) {
-	commit := targets.NewPayload("test", "test", "test")
+	empty := make(targets.FileList)
 
-	files := map[string][]byte{
+	files := targets.FileList{
 		"textfile.txt":   []byte("test file"),
 		"binaryfile.jpg": {0xff, 0xd8, 0xff, 0xe0},
 	}
 
-	err := commit.Add(files)
+	err := empty.Add(files)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = commit.Add(files)
+	err = empty.Add(files)
 	if err == nil {
 		t.Fatal("expected error when adding duplicate files but got none")
 	} else if err != targets.ErrFileAlreadyAdded {

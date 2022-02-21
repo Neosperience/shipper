@@ -52,7 +52,11 @@ type CommitPostData struct {
 	Actions       []CommitAction `json:"actions"`
 }
 
-func (gl *GitlabTarget) Commit(payload targets.CommitPayload) error {
+func (gl *GitlabTarget) Get(path string) ([]byte, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (gl *GitlabTarget) Commit(payload *targets.CommitPayload) error {
 	actions := []CommitAction{}
 	for name, content := range payload.Files {
 		// Encode as text or base64 depending on wheter content is a valid string
