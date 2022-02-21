@@ -3,20 +3,29 @@ stages:
   - build
   - release
 
-check:
-  stage: test
+.go:
   image: public.ecr.aws/docker/library/golang:1.17
+  cache:
+    paths:
+      - .cache
+  variables:
+    GOPATH: $CI_PROJECT_DIR/.cache
   before_script:
-  - go mod download
+    - mkdir -p .cache
+    - go mod download
+
+check:
+  extends: .go
+  stage: test
+  script:
   - go install golang.org/x/tools/cmd/goimports@latest
   - go install gotest.tools/gotestsum@latest
   - go install github.com/boumenot/gocover-cobertura@latest
-  script:
   - gofmt -d .
   - goimports -format-only -d .
   - go vet ./...
   - gotestsum --junitfile report.xml --format testname -- -coverprofile=cover.out -covermode count ./...
-  - gocover-copertura < cover.out > coverage.xml
+  - gocover-cobertura < cover.out > coverage.xml
   artifacts:
     when: always
     reports:
