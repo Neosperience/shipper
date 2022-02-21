@@ -34,3 +34,16 @@ check:
       junit: report.xml
       cobertura: coverage.xml
     expire_in: 30 days
+
+.build-and-upload-binary:
+  extends: .go
+  stage: build
+  needs: [check]
+  script:
+  - go build -race -o shipper ./cmd/shipper
+  - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file shipper "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/shipper/$SHIPPER_VERSION/shipper'
+
+build-binary-unstable:
+  extends: .build-and-upload-binary
+  variables:
+    SHIPPER_VERSION: unstable
