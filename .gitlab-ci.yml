@@ -52,6 +52,8 @@ build-container-unstable:
   stage: build
   needs: [check]
   tags: [new] # use new runners
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 build-binary-linux-stable:
   extends: .build-and-upload-binary
@@ -87,4 +89,4 @@ release:
     assets:
       links:
         - name: shipper_linux_amd64
-          url: ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/shipper/$SHIPPER_VERSION/$BIN_NAME
+          url: ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/shipper/$SHIPPER_VERSION/shipper_linux_amd64
