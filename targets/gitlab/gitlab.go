@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 	"unicode/utf8"
 
@@ -86,7 +87,7 @@ func (gl *GitlabTarget) Commit(payload targets.CommitPayload) error {
 		return fmt.Errorf("error encoding request payload: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/projects/%s/repository/commits", gl.baseURI, gl.projectID), b)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/projects/%s/repository/commits", gl.baseURI, url.PathEscape(gl.projectID)), b)
 	if err != nil {
 		return fmt.Errorf("error creating request: %w", err)
 	}

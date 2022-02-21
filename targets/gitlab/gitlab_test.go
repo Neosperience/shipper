@@ -61,7 +61,6 @@ func TestCommit(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-
 	target := NewTarget(server.URL, "test-project", testKey)
 	target.client = server.Client()
 
