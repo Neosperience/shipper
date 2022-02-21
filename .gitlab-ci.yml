@@ -3,14 +3,17 @@ stages:
   - build
   - release
 
+
 .go:
   image: public.ecr.aws/docker/library/golang:1.17
+  tags: [new] # use new runners
   cache:
     key: $CI_COMMIT_REF_SLUG
     paths:
       - .cache
   variables:
   before_script:
+    - cp -r .cache/* $(go env GOPATH) && rm -rf .cache
     - go mod download
   after_script:
     - mkdir -p .cache
