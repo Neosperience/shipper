@@ -13,4 +13,4 @@ RUN CGO_ENABLED=0 go build -o /go/bin/shipper ./cmd/shipper
 FROM gcr.io/distroless/static
 
 COPY --from=build-env /go/bin/shipper /
-CMD ["/app"]
+CMD ["/shipper"]

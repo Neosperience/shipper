@@ -38,17 +38,53 @@ check:
   extends: .go
   stage: build
   needs: [check]
-  script:
-  - go build -race -o shipper ./cmd/shipper
-  - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file shipper "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/shipper/$SHIPPER_VERSION/shipper"'
-
-build-binary-unstable:
-  extends: .build-and-upload-binary
   variables:
-    SHIPPER_VERSION: unstable
+    SHIPPER_VERSION:
+    GOOS: linux
+    GOARCH: amd64
+    BIN_NAME: shipper_$GOOS_$GOARCH
+  script:
+  - go build -race -o $BIN_NAME ./cmd/shipper
+  - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file $BIN_NAME "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/shipper/$SHIPPER_VERSION/$BIN_NAME"'
 
 build-container-unstable:
   extends: .build-with-buildctl
   stage: build
   needs: [check]
   tags: [new] # use new runners
+
+build-binary-linux-stable:
+  extends: .build-and-upload-binary
+  variables:
+    SHIPPER_VERSION: $CI_COMMIT_TAG
+    GOOS: linux
+    GOARCH: amd64
+  rules:
+  - if: $CI_COMMIT_TAG
+
+build-container-stable:
+  extends: .build-with-buildctl
+  stage: build
+  needs: [check]
+  tags: [new] # use new runners
+  rules:
+  - if: $CI_COMMIT_TAG
+
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  tags: [new] # use new runners
+  rules:
+  - if: $CI_COMMIT_TAG
+  script:
+    - echo "Releasing Shipper $CI_COMMIT_TAG"
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: 'Release $CI_COMMIT_TAG'
+    description: 'Shipper version $CI_COMMIT_TAG'
+    milestones:
+      - $CI_COMMIT_TAG
+    assets:
+      links:
+        - name: shipper_linux_amd64
+          url: ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/shipper/$SHIPPER_VERSION/$BIN_NAME
