@@ -1,0 +1,25 @@
+stages:
+  - test
+  - build
+  - release
+
+check:
+  stage: test
+  image: public.ecr.aws/docker/library/golang:1.17
+  before_script:
+  - go mod download
+  - go install golang.org/x/tools/cmd/goimports@latest
+  - go install gotest.tools/gotestsum@latest
+  - go install github.com/boumenot/gocover-cobertura@latest
+  script:
+  - gofmt -d .
+  - goimports -format-only -d .
+  - go vet ./...
+  - gotestsum --junitfile report.xml --format testname -- -coverprofile=cover.out -covermode count ./...
+  - gocover-copertura < cover.out > coverage.xml
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+      cobertura: coverage.xml
+    expire_in: 30 days
