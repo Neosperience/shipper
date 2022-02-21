@@ -6,14 +6,15 @@ stages:
 .go:
   image: public.ecr.aws/docker/library/golang:1.17
   cache:
+    key: $CI_COMMIT_REF_SLUG
     paths:
       - .cache
   variables:
-    GOPATH: $CI_PROJECT_DIR/.cache
   before_script:
-    - mkdir -p .cache
-    - export GO_PKGS=$(go list ./... | grep -v .cache/)
     - go mod download
+  after_script:
+    - mkdir -p .cache
+    - cp -r $(go env GOPATH)/* .cache/
 
 check:
   extends: .go
@@ -22,10 +23,10 @@ check:
   - go install golang.org/x/tools/cmd/goimports@latest
   - go install gotest.tools/gotestsum@latest
   - go install github.com/boumenot/gocover-cobertura@latest
-  - gofmt -d $GO_PKGS
-  - goimports -format-only -d $GO_PKGS
-  - go vet $GO_PKGS
-  - gotestsum --junitfile report.xml --format testname -- -coverprofile=cover.out -covermode count $GO_PKGS
+  - gofmt -d .
+  - goimports -format-only -d .
+  - go vet ./...
+  - gotestsum --junitfile report.xml --format testname -- -coverprofile=cover.out -covermode count ./...
   - gocover-cobertura < cover.out > coverage.xml
   artifacts:
     when: always
