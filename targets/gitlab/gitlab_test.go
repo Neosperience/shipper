@@ -1,9 +1,13 @@
 package gitlab_target
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	jsoniter "github.com/json-iterator/go"
@@ -62,5 +66,49 @@ func TestCommit(t *testing.T) {
 
 	if err := target.Commit(commit); err != nil {
 		t.Fatal(err.Error())
+	}
+}
+
+func TestGet(t *testing.T) {
+	testKey := "path/to/test-key"
+	testData := []byte("hello test here")
+	testDataHash := sha256.Sum256(testData)
+
+	// Setup test HTTP server/client
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		// Check authorization key
+		token := req.Header.Get("PRIVATE-TOKEN")
+		if token != testKey {
+			t.Fatalf("Expected '%s' as PRIVATE-TOKEN, got '%s'", testKey, token)
+		}
+
+		parts := strings.Split(testKey, "/")
+		baseKey := parts[len(parts)-1]
+
+		err := jsoniter.ConfigFastest.NewEncoder(rw).Encode(FileInfo{
+			FileName:      baseKey,
+			FilePath:      testKey,
+			Size:          len(testData),
+			Encoding:      "base64",
+			Content:       base64.StdEncoding.EncodeToString(testData),
+			ContentSha256: hex.EncodeToString(testDataHash[:]),
+			Ref:           "main",
+			BlobID:        "somerandomid",
+			CommitID:      "someotherid",
+		})
+		if err != nil {
+			t.Fatalf("Failed encoding response: %s", err.Error())
+		}
+	}))
+	defer server.Close()
+	target := NewAPIClient(server.URL, "test-project", testKey)
+	target.client = server.Client()
+
+	byt, err := target.Get(testKey, "main")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if !bytes.Equal(byt, testData) {
+		t.Fatal("Expected file content is different from retrieved")
 	}
 }

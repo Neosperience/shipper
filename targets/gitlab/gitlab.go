@@ -83,7 +83,7 @@ func (gl *GitlabRepository) Get(path string, ref string) ([]byte, error) {
 	}
 
 	var fileinfo FileInfo
-	jsoniter.ConfigFastest.NewDecoder(res.Body).Decode(fileinfo)
+	jsoniter.ConfigFastest.NewDecoder(res.Body).Decode(&fileinfo)
 
 	switch fileinfo.Encoding {
 	case "text":
