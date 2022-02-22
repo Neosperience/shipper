@@ -15,15 +15,6 @@ type CommitPayload struct {
 
 type FileList map[string][]byte
 
-// Target is a supported platform where we can push commits to
-type Target interface {
-	// Get retrieves a file from the repository
-
-	Get(path string) ([]byte, error)
-	// Commit creates a commit from a payload and pushes it to the target
-	Commit(data *CommitPayload) error
-}
-
 var (
 	// ErrFileAlreadyAdded happens if we're trying to add a file to a commit payload when one with the same name is already present
 	ErrFileAlreadyAdded = errors.New("file already added")

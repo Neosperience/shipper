@@ -16,30 +16,8 @@ func app(c *cli.Context) error {
 	// Create payload
 	payload := targets.NewPayload(c.String("repo-branch"), c.String("commit-author"), c.String("commit-message"))
 
-	// Get provider to use
-	templater := c.String("provider")
-	switch templater {
-	case "helm":
-		valuesFile := c.String("helm-values-file")
-		assert(valuesFile != "", "values.yaml path must be specified when using Helm")
-
-		newfiles, err := helm_templater.UpdateHelmChart(helm_templater.HelmProviderOptions{
-			ValuesFile: valuesFile,
-			Image:      c.String("container-image"),
-			ImagePath:  c.String("helm-image-path"),
-			Tag:        c.String("container-tag"),
-			TagPath:    c.String("helm-tag-path"),
-		})
-		if err != nil {
-			return err
-		}
-		payload.Files.Add(newfiles)
-	case "kustomize":
-		return fmt.Errorf("not implemented")
-	}
-
 	// Get target repository interface
-	var repository targets.Target
+	var repository targets.Repository
 	target := c.String("repo-kind")
 	switch target {
 	case "gitlab":
@@ -52,7 +30,29 @@ func app(c *cli.Context) error {
 		apikey := c.String("gitlab-key")
 		assert(apikey != "", "Gitlab API key must be specified when using Gitlab")
 
-		repository = gitlab_target.NewTarget(uri, project, apikey)
+		repository = gitlab_target.NewAPIClient(uri, project, apikey)
+	}
+
+	// Get provider to use
+	templater := c.String("provider")
+	switch templater {
+	case "helm":
+		valuesFile := c.String("helm-values-file")
+		assert(valuesFile != "", "values.yaml path must be specified when using Helm")
+
+		newfiles, err := helm_templater.UpdateHelmChart(repository, helm_templater.HelmProviderOptions{
+			ValuesFile: valuesFile,
+			Image:      c.String("container-image"),
+			ImagePath:  c.String("helm-image-path"),
+			Tag:        c.String("container-tag"),
+			TagPath:    c.String("helm-tag-path"),
+		})
+		if err != nil {
+			return err
+		}
+		payload.Files.Add(newfiles)
+	case "kustomize":
+		return fmt.Errorf("not implemented")
 	}
 
 	return repository.Commit(payload)

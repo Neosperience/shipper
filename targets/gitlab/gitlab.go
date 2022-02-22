@@ -14,8 +14,8 @@ import (
 	"gitlab.neosperience.com/tools/shipper/targets"
 )
 
-// GitlabTarget commits to a GitLab repository using the GitLab REST Commits APIs
-type GitlabTarget struct {
+// GitlabRepository commits to a GitLab repository using the GitLab REST Commits APIs
+type GitlabRepository struct {
 	baseURI    string
 	projectID  string
 	privateKey string
@@ -23,13 +23,13 @@ type GitlabTarget struct {
 	client *http.Client
 }
 
-// NewTarget initialized a GitlabTarget instance
-func NewTarget(uri string, projectID string, key string) *GitlabTarget {
+// NewAPIClient creates a GitlabRepository instance
+func NewAPIClient(uri string, projectID string, key string) *GitlabRepository {
 	var transport = &http.Transport{
 		IdleConnTimeout: 30 * time.Second,
 	}
 	var client = &http.Client{Transport: transport}
-	return &GitlabTarget{
+	return &GitlabRepository{
 		baseURI:    uri,
 		projectID:  projectID,
 		privateKey: key,
@@ -52,11 +52,50 @@ type CommitPostData struct {
 	Actions       []CommitAction `json:"actions"`
 }
 
-func (gl *GitlabTarget) Get(path string) ([]byte, error) {
-	return nil, fmt.Errorf("not implemented")
+type FileInfo struct {
+	FileName      string `json:"file_name"`
+	FilePath      string `json:"file_path"`
+	Size          int    `json:"size"`
+	Encoding      string `json:"encoding"`
+	Content       string `json:"content"`
+	ContentSha256 string `json:"content_sha256"`
+	Ref           string `json:"ref"`
+	BlobID        string `json:"blob_id"`
+	CommitID      string `json:"commit_id"`
 }
 
-func (gl *GitlabTarget) Commit(payload *targets.CommitPayload) error {
+func (gl *GitlabRepository) Get(path string, ref string) ([]byte, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/projects/%s/repository/files/%s?ref=%s", gl.baseURI, url.PathEscape(gl.projectID), url.PathEscape(path), url.QueryEscape(ref)), nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+	req.Header.Set("PRIVATE-TOKEN", gl.privateKey)
+
+	res, err := gl.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error performing request: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		body, _ := ioutil.ReadAll(res.Body)
+		return nil, fmt.Errorf("request returned error: %s", body)
+	}
+
+	var fileinfo FileInfo
+	jsoniter.ConfigFastest.NewDecoder(res.Body).Decode(fileinfo)
+
+	switch fileinfo.Encoding {
+	case "text":
+		return []byte(fileinfo.Content), nil
+	case "base64":
+		return base64.StdEncoding.DecodeString(fileinfo.Content)
+	default:
+		return nil, fmt.Errorf("received file in unsupported encoding: %s", fileinfo.Encoding)
+	}
+}
+
+func (gl *GitlabRepository) Commit(payload *targets.CommitPayload) error {
 	actions := []CommitAction{}
 	for name, content := range payload.Files {
 		// Encode as text or base64 depending on wheter content is a valid string

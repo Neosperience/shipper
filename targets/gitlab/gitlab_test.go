@@ -57,7 +57,7 @@ func TestCommit(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	target := NewTarget(server.URL, "test-project", testKey)
+	target := NewAPIClient(server.URL, "test-project", testKey)
 	target.client = server.Client()
 
 	if err := target.Commit(commit); err != nil {
