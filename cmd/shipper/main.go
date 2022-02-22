@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -10,6 +9,7 @@ import (
 	"gitlab.neosperience.com/tools/shipper/targets"
 	gitlab_target "gitlab.neosperience.com/tools/shipper/targets/gitlab"
 	helm_templater "gitlab.neosperience.com/tools/shipper/templater/helm"
+	kustomize_templater "gitlab.neosperience.com/tools/shipper/templater/kustomize"
 )
 
 func app(c *cli.Context) error {
@@ -52,7 +52,18 @@ func app(c *cli.Context) error {
 		}
 		payload.Files.Add(newfiles)
 	case "kustomize":
-		return fmt.Errorf("not implemented")
+		kustomizationFile := c.String("kustomize-file")
+		assert(kustomizationFile != "", "kustomization.yaml path must be specified when using Kustomize")
+
+		newfiles, err := kustomize_templater.UpdateKustomization(repository, kustomize_templater.KustomizeProviderOptions{
+			KustomizationFile: kustomizationFile,
+			Image:             c.String("container-image"),
+			NewTag:            c.String("container-tag"),
+		})
+		if err != nil {
+			return err
+		}
+		payload.Files.Add(newfiles)
 	}
 
 	return repository.Commit(payload)
@@ -61,6 +72,7 @@ func app(c *cli.Context) error {
 func main() {
 	app := &cli.App{
 		Flags: []cli.Flag{
+			// Global options
 			&cli.StringFlag{
 				Name:     "templater",
 				Aliases:  []string{"p"},
@@ -111,6 +123,7 @@ func main() {
 				EnvVars:  []string{"SHIPPER_CONTAINER_TAG"},
 				Required: true,
 			},
+			// Helm options
 			&cli.StringFlag{
 				Name:    "helm-values-file",
 				Aliases: []string{"hpath"},
@@ -131,6 +144,14 @@ func main() {
 				EnvVars: []string{"SHIPPER_HELM_TAG_PATH"},
 				Value:   "image.tag",
 			},
+			// Kustomize options
+			&cli.StringFlag{
+				Name:    "kustomize-file",
+				Aliases: []string{"kfile"},
+				Usage:   "[kustomize] Path to kustomization.yaml file",
+				EnvVars: []string{"SHIPPER_KUSTOMIZE_FILE"},
+			},
+			// Gitlab options
 			&cli.StringFlag{
 				Name:    "gitlab-endpoint",
 				Aliases: []string{"gl-uri"},
@@ -158,7 +179,8 @@ func main() {
 
 func check(err error, format string, args ...interface{}) {
 	if err != nil {
-		log.Fatalf(format+": "+err.Error(), args...)
+		args = append(args, err.Error())
+		log.Fatalf(format+": %s", args...)
 	}
 }
 
