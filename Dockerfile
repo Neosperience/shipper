@@ -10,7 +10,7 @@ COPY . .
 
 RUN CGO_ENABLED=0 go build -o /go/bin/shipper ./cmd/shipper
 
-FROM gcr.io/distroless/static
+FROM public.ecr.aws/docker/library/debian:bullseye-slim
 
-COPY --from=build-env /go/bin/shipper /
-CMD ["/shipper"]
+COPY --from=build-env /go/bin/shipper /usr/local/bin
+CMD ["shipper"]
