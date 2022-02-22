@@ -157,7 +157,9 @@ func main() {
 }
 
 func check(err error, format string, args ...interface{}) {
-	assert(err != nil, format+": "+err.Error(), args...)
+	if err != nil {
+		log.Fatalf(format+": "+err.Error(), args...)
+	}
 }
 
 func assert(cond bool, format string, args ...interface{}) {
