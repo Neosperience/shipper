@@ -135,6 +135,7 @@ func (gl *GitlabRepository) Commit(payload *targets.CommitPayload) error {
 		return fmt.Errorf("error creating request: %w", err)
 	}
 	req.Header.Set("PRIVATE-TOKEN", gl.privateKey)
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err := gl.client.Do(req)
 	if err != nil {
