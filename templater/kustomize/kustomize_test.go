@@ -86,8 +86,12 @@ func testUpdateKustomizationCommon(t *testing.T, kustomizeFile string) {
 	}
 }
 
-func TestUpdateKustomizationEmpty(t *testing.T) {
+func TestUpdateKustomizationNoImages(t *testing.T) {
 	testUpdateKustomizationCommon(t, kustomizationEmpty)
+}
+
+func TestUpdateKustomizationEmpty(t *testing.T) {
+	testUpdateKustomizationCommon(t, ``)
 }
 
 func TestUpdateKustomizationExisting(t *testing.T) {

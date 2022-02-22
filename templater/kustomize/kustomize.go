@@ -1,6 +1,7 @@
 package kustomize_templater
 
 import (
+	"bytes"
 	"fmt"
 
 	"gitlab.neosperience.com/tools/shipper/targets"
@@ -72,6 +73,10 @@ func UpdateKustomization(repository targets.Repository, options KustomizeProvide
 	byt, err := yaml.Marshal(values)
 	if err != nil {
 		return nil, fmt.Errorf("could not serialize modified file to YAML: %w", err)
+	}
+
+	if bytes.Equal(byt, file) {
+		return targets.FileList{}, nil
 	}
 
 	diff := make(targets.FileList)

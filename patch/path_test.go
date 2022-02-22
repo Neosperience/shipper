@@ -6,7 +6,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestSetPath(t *testing.T) {
+func TestSetPathExisting(t *testing.T) {
 	randomStruct := struct {
 		Test   string
 		Nested struct {
@@ -57,6 +57,21 @@ func TestSetPath(t *testing.T) {
 	// Check that value was changed
 	if asMap["nested"].(map[string]interface{})["other-value"] != "new-value" {
 		t.Fatal("New value not found or different")
+	}
+}
+
+func TestSetPathEmpty(t *testing.T) {
+	asMap := make(map[string]interface{})
+
+	// Call SetPath on an existing tree
+	err := SetPath(asMap, "nested.value", "changed")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that value was changed
+	if asMap["nested"].(map[string]interface{})["value"] != "changed" {
+		t.Fatal("Expected .Nested.Value value is different")
 	}
 }
 

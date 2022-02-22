@@ -72,12 +72,12 @@ tolerations: []
 affinity: {}
 `
 
-func TestUpdateHelmChart(t *testing.T) {
+func testUpdateHelmChart(t *testing.T, file string) {
 	newImage := "git.org/myorg/myrepo"
 	newTag := "2022-02-22"
 
 	repo := targets.NewInMemoryRepository(targets.FileList{
-		"path/to/values.yaml": []byte(testChart),
+		"path/to/values.yaml": []byte(file),
 	})
 
 	commitData, err := helm_templater.UpdateHelmChart(repo, helm_templater.HelmProviderOptions{
@@ -114,4 +114,12 @@ func TestUpdateHelmChart(t *testing.T) {
 	if parsed.Image.Tag != newTag {
 		t.Fatal("Image tag was not set to the new expected value")
 	}
+}
+
+func TestUpdateHelmChartExisting(t *testing.T) {
+	testUpdateHelmChart(t, testChart)
+}
+
+func TestUpdateHelmChartEmpty(t *testing.T) {
+	testUpdateHelmChart(t, ``)
 }

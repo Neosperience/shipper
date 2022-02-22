@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -31,10 +32,12 @@ func app(c *cli.Context) error {
 		assert(apikey != "", "Gitlab API key must be specified when using Gitlab")
 
 		repository = gitlab_target.NewAPIClient(uri, project, apikey)
+	default:
+		return fmt.Errorf("repository option not supported: %s", target)
 	}
 
 	// Get provider to use
-	templater := c.String("provider")
+	templater := c.String("templater")
 	switch templater {
 	case "helm":
 		valuesFile := c.String("helm-values-file")
@@ -42,6 +45,7 @@ func app(c *cli.Context) error {
 
 		newfiles, err := helm_templater.UpdateHelmChart(repository, helm_templater.HelmProviderOptions{
 			ValuesFile: valuesFile,
+			Ref:        c.String("repo-branch"),
 			Image:      c.String("container-image"),
 			ImagePath:  c.String("helm-image-path"),
 			Tag:        c.String("container-tag"),
@@ -57,6 +61,7 @@ func app(c *cli.Context) error {
 
 		newfiles, err := kustomize_templater.UpdateKustomization(repository, kustomize_templater.KustomizeProviderOptions{
 			KustomizationFile: kustomizationFile,
+			Ref:               c.String("repo-branch"),
 			Image:             c.String("container-image"),
 			NewTag:            c.String("container-tag"),
 		})
@@ -64,6 +69,13 @@ func app(c *cli.Context) error {
 			return err
 		}
 		payload.Files.Add(newfiles)
+	default:
+		return fmt.Errorf("templater option not supported: %s", templater)
+	}
+
+	if len(payload.Files) < 1 {
+		log.Println("no changes to commit, exiting")
+		return nil
 	}
 
 	return repository.Commit(payload)
