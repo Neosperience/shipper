@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"gitlab.neosperience.com/tools/shipper/targets"
+	"github.com/neosperience/shipper/targets"
 )
 
 func TestSplitAuthor(t *testing.T) {

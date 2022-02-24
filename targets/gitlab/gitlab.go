@@ -11,7 +11,7 @@ import (
 	"unicode/utf8"
 
 	jsoniter "github.com/json-iterator/go"
-	"gitlab.neosperience.com/tools/shipper/targets"
+	"github.com/neosperience/shipper/targets"
 )
 
 // GitlabRepository commits to a GitLab repository using the GitLab REST Commits APIs

@@ -1,4 +1,4 @@
-module gitlab.neosperience.com/tools/shipper
+module github.com/neosperience/shipper
 
 go 1.17
 

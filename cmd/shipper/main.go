@@ -7,10 +7,10 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"gitlab.neosperience.com/tools/shipper/targets"
-	gitlab_target "gitlab.neosperience.com/tools/shipper/targets/gitlab"
-	helm_templater "gitlab.neosperience.com/tools/shipper/templater/helm"
-	kustomize_templater "gitlab.neosperience.com/tools/shipper/templater/kustomize"
+	"github.com/neosperience/shipper/targets"
+	gitlab_target "github.com/neosperience/shipper/targets/gitlab"
+	helm_templater "github.com/neosperience/shipper/templater/helm"
+	kustomize_templater "github.com/neosperience/shipper/templater/kustomize"
 )
 
 func app(c *cli.Context) error {

@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	jsoniter "github.com/json-iterator/go"
-	"gitlab.neosperience.com/tools/shipper/targets"
+	"github.com/neosperience/shipper/targets"
 )
 
 func TestCommit(t *testing.T) {

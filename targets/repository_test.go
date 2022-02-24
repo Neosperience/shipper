@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"gitlab.neosperience.com/tools/shipper/targets"
+	"github.com/neosperience/shipper/targets"
 )
 
 func TestInMemoryRepository(t *testing.T) {

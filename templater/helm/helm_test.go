@@ -3,8 +3,8 @@ package helm_templater_test
 import (
 	"testing"
 
-	"gitlab.neosperience.com/tools/shipper/targets"
-	helm_templater "gitlab.neosperience.com/tools/shipper/templater/helm"
+	"github.com/neosperience/shipper/targets"
+	helm_templater "github.com/neosperience/shipper/templater/helm"
 	"gopkg.in/yaml.v3"
 )
 

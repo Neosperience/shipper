@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"gitlab.neosperience.com/tools/shipper/patch"
-	"gitlab.neosperience.com/tools/shipper/targets"
+	"github.com/neosperience/shipper/patch"
+	"github.com/neosperience/shipper/targets"
 	"gopkg.in/yaml.v3"
 )
 
