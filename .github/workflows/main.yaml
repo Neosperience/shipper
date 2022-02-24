@@ -24,6 +24,11 @@ jobs:
       - run: goimports -format-only -d .
       - run: go vet ./...
       - run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+      - uses: codecov/codecov-action@v2
+        with:
+          files: ./coverage.out
+          flags: unittests
+          verbose: true 
       - run: go build -race ./cmd/shipper
   container-image:
     if: github.ref == 'refs/heads/main'
