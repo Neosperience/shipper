@@ -7,4 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Support for GitLab as a Git provider
+- Support for Helm as a templater
+- Support for Kustomize as a templater
+
 [unreleased]: https://github.com/neosperience/shipper/compare/main...0.0.0
