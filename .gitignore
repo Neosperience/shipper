@@ -1,3 +1,5 @@
 cover.out
 coverage.xml
 report.xml
+
+dist/

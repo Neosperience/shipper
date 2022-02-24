@@ -5,6 +5,6 @@ pkgs.mkShell {
   buildInputs = with pkgs; [
     unstable.go
     goimports
-    gotestsum
+    goreleaser
   ];
 }
