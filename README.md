@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/Neosperience/shipper/actions/workflows/main.yaml/badge.svg)](https://github.com/Neosperience/shipper/actions/workflows/main.yaml)
 [![codecov](https://codecov.io/gh/Neosperience/shipper/branch/main/graph/badge.svg?token=DZMN03DYDR)](https://codecov.io/gh/Neosperience/shipper)
+![GitHub release](https://img.shields.io/github/v/release/neosperience/shipper?include_prereleases)
 
 **Ship your apps the GitOps way!**
 
