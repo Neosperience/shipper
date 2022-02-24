@@ -18,9 +18,17 @@ checksum:
   name_template: 'checksums.txt'
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
+release:
+  draft: true
+  prerelease: auto
+  header: |
+    ## Shipper ({{ .Tag }})
+
+    ### Changelog
+
+    <copy the relevant CHANGELOG.md entries>
+
+    ### Docker images
+    - `docker pull ghcr.io/neosperience/shipper:{{ .Tag }}`
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
+  skip: true

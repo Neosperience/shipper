@@ -50,9 +50,11 @@ deploy-prod:
 
 ## Contributing
 
-Found a bug or need a new feature? [Open an issue and discuss it with the team!](https://github.com/Neosperience/shipper/issues/new).
+Found a bug or need a new feature? [Open an issue and discuss it with the team!](https://github.com/Neosperience/shipper/issues/new). Don't forget to check out our [contribution guide](CONTRIBUTING.md) for more information!
 
-Shipper is written in [Golang], so you'll need to install the SDK to work with the codebase.
+### Releasing
+
+See our [release guide](RELEASE.md)
 
 ## License
 
@@ -81,3 +83,4 @@ limitations under the License.
 [GitHub]: https://github.com
 [BitBucket]: https://bitbucket.com
 [Golang]: https://go.dev
+[SemVer]: https://semver.org/
