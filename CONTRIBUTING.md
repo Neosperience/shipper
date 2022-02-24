@@ -1,4 +1,4 @@
-# Contributing to Auth0 projects
+# Contributing to Neosperience projects
 
 A big welcome and thank you for considering contributing to Neosperience open source projects!
 
@@ -34,12 +34,11 @@ If you find an Issue that addresses the problem you're having, please add your o
 PRs to our projects are always welcome and can be a quick way to get your fix or improvement slated for the next release. In general, PRs should:
 
 - Only fix/add the functionality in question **OR** address wide-spread whitespace/style issues, not both.
-- Add unit or integration tests for fixed or changed functionality (if a test suite already exists).
+- Add unit or integration tests for fixed or changed functionality
 - Address a single concern in the least number of changed lines as possible.
-- Include documentation in the repo or on our [docs site](https://auth0.com/docs).
 - Be accompanied by a complete Pull Request template (loaded automatically when a PR is created).
 
-For changes that address core functionality or would require breaking changes (e.g. a major release), it's best to open an Issue to discuss your proposal first. This is not required but can save time creating and reviewing changes.
+For changes that address core functionality or would require breaking changes (e.g. a major release), it's best to open a Discussion to discuss your proposal first. This is not required but can save time creating and reviewing changes.
 
 In general, we follow the ["fork-and-pull" Git workflow](https://github.com/susam/gitpr)
 
@@ -50,6 +49,8 @@ In general, we follow the ["fork-and-pull" Git workflow](https://github.com/susa
 5. Following any formatting and testing guidelines specific to this repo
 6. Push changes to your fork
 7. Open a PR in our repository and follow the PR template so that we can efficiently review the changes.
+
+All contributions to this project must abide to the [DCO](DCO) and be properly [signed off](https://docs.pi-hole.net/guides/github/how-to-signoff/).
 
 ## Getting Help
 
