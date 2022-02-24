@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/neosperience/shipper/targets"
+	bitbucket_target "github.com/neosperience/shipper/targets/bitbucket"
 	gitlab_target "github.com/neosperience/shipper/targets/gitlab"
 	helm_templater "github.com/neosperience/shipper/templater/helm"
 	kustomize_templater "github.com/neosperience/shipper/templater/kustomize"
@@ -32,6 +33,14 @@ func app(c *cli.Context) error {
 		assert(apikey != "", "Gitlab API key must be specified when using Gitlab")
 
 		repository = gitlab_target.NewAPIClient(uri, project, apikey)
+	case "bitbucket-cloud":
+		creds := c.String("bitbucket-key")
+		assert(creds != "", "Bitbucket cloud credentials must be specified when using Bitbucket cloud")
+
+		project := c.String("bitbucket-project")
+		assert(project != "", "Bitbucket project path must be specified when using Bitbucket cloud")
+
+		repository = bitbucket_target.NewCloudAPIClient(project, creds)
 	default:
 		return fmt.Errorf("repository option not supported: %s", target)
 	}
@@ -96,7 +105,7 @@ func main() {
 				Name:     "repo-kind",
 				Aliases:  []string{"t"},
 				Value:    "gitlab",
-				Usage:    "Repository type (available: \"gitlab\")",
+				Usage:    "Repository type (available: \"gitlab\", \"bitbucket-cloud\")",
 				EnvVars:  []string{"SHIPPER_REPO_KIND"},
 				Required: true,
 			},
@@ -180,6 +189,19 @@ func main() {
 				Name:    "gitlab-project",
 				Aliases: []string{"gl-pid"},
 				Usage:   "[gitlab] Project ID in \"org/project\" format",
+				EnvVars: []string{"SHIPPER_GITLAB_PROJECT"},
+			},
+			// Bitbucket options
+			&cli.StringFlag{
+				Name:    "bitbucket-key",
+				Aliases: []string{"bb-key"},
+				Usage:   "[bitbucket-cloud] Username/password pair in \"username:password\" format (use app passwords!)",
+				EnvVars: []string{"SHIPPER_GITLAB_KEY"},
+			},
+			&cli.StringFlag{
+				Name:    "bitbucket-project",
+				Aliases: []string{"bb-pid"},
+				Usage:   "[bitbucket-cloud] Project path in \"org/project\" format",
 				EnvVars: []string{"SHIPPER_GITLAB_PROJECT"},
 			},
 		},
