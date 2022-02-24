@@ -8,46 +8,44 @@ A practical example in Neosperience: applications deployed on instances of the [
 
 Shipper automates this by leveraging the native Git provider API (e.g. GitLab, GitHub, BitBucket, etc...) to atomically update the configuration file.
 
+## Supported tools
+
+### Git Providers
+
+- [GitLab] (both self-managed and gitlab.com)
+- [GitHub] (planned)
+- [BitBucket] (planned)
+
+### Templaters
+
+- [Helm]
+- [Kustomize]
+
 ## Usage
 
-The main use-case for Shipper is to be used as a CI pipeline step. The Tools Team provides a preconfigured [GitLab CI template](https://gitlab.neosperience.com/tools/templates/) that you can just import in your `.gitlab-ci.yml`. The Templates repository README contains more information about its usage.
+The main use-case for Shipper is to be used as a CI pipeline step. In container-based CI systems like GitLab CI, GitHub Actions and alike, you can run the [official container image](https://github.com/Neosperience/shipper/pkgs/container/shipper) in a step and invoke shipper with the appropriate flags.
+
+### GitLab CI
 
 ```yaml
-include:
-  - project: tools/templates
-    file: /ci/build-buildctl.yml
-
-  - project: tools/templates
-    file: /ci/deploy-helm.yml
-  # or
-  - project: tools/templates
-    file: /ci/deploy-kustomize.yml
-
-build-and-push:
-  extends: .build-with-buildctl
-  stage: build
-
-deploy-helm:
-  extends: .deploy-with-helm-v2
-  stage: deploy
-  needs:
-    - build-and-push
-  environment: staging
-  variables:
-    DEPLOY_REPO: my-group/my-project-deployments
-    DEPLOY_VALUES_FILE: staging/values.yaml
-
-#or
-
-deploy-kustomize:
-  extends: .deploy-with-kustomize-v2
-  stage: deploy
-  needs:
-    - build-and-push
-  environment: staging
-  variables:
-    DEPLOY_REPO: my-group/my-project-deployments
-    DEPLOY_KUSTOMIZATION_FILE: staging/kustomization.yaml
+deploy-prod:
+  image: ghcr.io/neosperience/shipper:main
+  environment: prod
+  script:
+  - |
+    shipper --templater helm \
+      --repo-kind gitlab \
+      --repo-branch main \
+      --commit-author "$GITLAB_USER_NAME <$GITLAB_USER_EMAIL>" \
+      --commit-message "Deploy new version" \
+      --container-image $CI_REGISTRY_IMAGE \
+      --container-tag  $CI_COMMIT_SHA \
+      --helm-values-file prod/values.yaml \
+      --helm-image-path image.repository \
+      --helm-tag-path image.tag \
+      --gitlab-endpoint $CI_API_V4_URL \
+      --gitlab-key $CI_JOB_TOKEN" \
+      --gitlab-project my-app/deployments
 ```
 
 ## Contributing
@@ -78,4 +76,7 @@ limitations under the License.
 [Karavel Container Platform]: https://platform.karavel.io
 [Helm]: https://helm.sh
 [Kustomize]: https://kustomize.io
+[GitLab]: https://gitlab.com
+[GitHub]: https://github.com
+[BitBucket]: https://bitbucket.com
 [Golang]: https://go.dev
