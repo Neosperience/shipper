@@ -1,5 +1,6 @@
 # Shipper <img align="right" width=300 src="logo.webp">
 
+[![CI](https://github.com/Neosperience/shipper/actions/workflows/main.yaml/badge.svg)](https://github.com/Neosperience/shipper/actions/workflows/main.yaml)
 [![codecov](https://codecov.io/gh/Neosperience/shipper/branch/main/graph/badge.svg?token=DZMN03DYDR)](https://codecov.io/gh/Neosperience/shipper)
 
 **Ship your apps the GitOps way!**
