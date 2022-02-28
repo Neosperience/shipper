@@ -75,6 +75,21 @@ func TestSetPathEmpty(t *testing.T) {
 	}
 }
 
+func TestSetPathInvalid(t *testing.T) {
+	asMap := make(map[string]interface{})
+	asMap["nested"] = 12
+
+	// Call SetPath on an existing tree
+	err := SetPath(asMap, "nested.value", "changed")
+	if err == nil {
+		t.Fatal("expected error but everything went fine")
+	} else {
+		if err != ErrInvalidYAMLStructure {
+			t.Fatalf("unexpected error: %s", err.Error())
+		}
+	}
+}
+
 func BenchmarkSetPath(b *testing.B) {
 	asMap := make(map[string]interface{})
 	err := SetPath(asMap, "nested.value", "new-value")

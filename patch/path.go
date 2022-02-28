@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+var (
+	ErrInvalidYAMLStructure = errors.New("found a value while traversing a tree")
+)
+
 func SetPath(root map[string]interface{}, path string, value interface{}) error {
 	pieces := strings.Split(path, ".")
 	data := root
@@ -19,7 +23,7 @@ func SetPath(root map[string]interface{}, path string, value interface{}) error 
 		case map[string]interface{}:
 			data = v
 		default:
-			return errors.New("found a value while traversing a tree")
+			return ErrInvalidYAMLStructure
 		}
 	}
 
