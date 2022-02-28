@@ -9,6 +9,7 @@ import (
 
 	"github.com/neosperience/shipper/targets"
 	bitbucket_target "github.com/neosperience/shipper/targets/bitbucket"
+	github_target "github.com/neosperience/shipper/targets/github"
 	gitlab_target "github.com/neosperience/shipper/targets/gitlab"
 	helm_templater "github.com/neosperience/shipper/templater/helm"
 	kustomize_templater "github.com/neosperience/shipper/templater/kustomize"
@@ -33,6 +34,17 @@ func app(c *cli.Context) error {
 		assert(apikey != "", "Gitlab API key must be specified when using Gitlab")
 
 		repository = gitlab_target.NewAPIClient(uri, project, apikey)
+	case "github":
+		uri := c.String("github-endpoint")
+		assert(uri != "", "GitHub endpoint must be specified when using GitHub")
+
+		project := c.String("github-project")
+		assert(project != "", "GitHub project ID must be specified when using GitHub")
+
+		apikey := c.String("github-key")
+		assert(apikey != "", "GitHub API key must be specified when using GitHub")
+
+		repository = github_target.NewAPIClient(uri, project, apikey)
 	case "bitbucket-cloud":
 		creds := c.String("bitbucket-key")
 		assert(creds != "", "Bitbucket cloud credentials must be specified when using Bitbucket cloud")
@@ -105,7 +117,7 @@ func main() {
 				Name:     "repo-kind",
 				Aliases:  []string{"t"},
 				Value:    "gitlab",
-				Usage:    "Repository type (available: \"gitlab\", \"bitbucket-cloud\")",
+				Usage:    "Repository type (available: \"gitlab\", \"github\", \"bitbucket-cloud\")",
 				EnvVars:  []string{"SHIPPER_REPO_KIND"},
 				Required: true,
 			},
@@ -176,8 +188,9 @@ func main() {
 			&cli.StringFlag{
 				Name:    "gitlab-endpoint",
 				Aliases: []string{"gl-uri"},
-				Usage:   "[gitlab] Gitlab API endpoint, including \"/api/v4/\"",
+				Usage:   "[gitlab] Gitlab API endpoint, including \"/api/v4\"",
 				EnvVars: []string{"SHIPPER_GITLAB_ENDPOINT"},
+				Value:   "https://gitlab.com/api/v4",
 			},
 			&cli.StringFlag{
 				Name:    "gitlab-key",
@@ -190,6 +203,26 @@ func main() {
 				Aliases: []string{"gl-pid"},
 				Usage:   "[gitlab] Project ID in \"org/project\" format",
 				EnvVars: []string{"SHIPPER_GITLAB_PROJECT"},
+			},
+			// GitHub options
+			&cli.StringFlag{
+				Name:    "github-endpoint",
+				Aliases: []string{"gh-uri"},
+				Usage:   "[github] GitHub API endpoint (include \"/api/v3\" if using Enterprise Server)",
+				EnvVars: []string{"SHIPPER_GITHUB_ENDPOINT"},
+				Value:   "https://api.github.com",
+			},
+			&cli.StringFlag{
+				Name:    "github-key",
+				Aliases: []string{"gh-key"},
+				Usage:   "[github] Username/password pair in \"username:password\" format (use a personal access token!)",
+				EnvVars: []string{"SHIPPER_GITHUB_KEY"},
+			},
+			&cli.StringFlag{
+				Name:    "github-project",
+				Aliases: []string{"gh-pid"},
+				Usage:   "[github] Project ID in \"org/project\" format",
+				EnvVars: []string{"SHIPPER_GITHUB_PROJECT"},
 			},
 			// Bitbucket options
 			&cli.StringFlag{
