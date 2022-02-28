@@ -1,6 +1,7 @@
 package kustomize_templater_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/neosperience/shipper/targets"
@@ -43,6 +44,7 @@ replicas:
 func testUpdateKustomizationCommon(t *testing.T, kustomizeFile string) {
 	newImage := "git.org/myorg/myrepo"
 	newTag := "2022-02-22"
+	newImagePath := "git.org/other-org/myrepo"
 
 	repo := targets.NewInMemoryRepository(targets.FileList{
 		"path/to/kustomization.yaml": []byte(kustomizeFile),
@@ -53,6 +55,7 @@ func testUpdateKustomizationCommon(t *testing.T, kustomizeFile string) {
 		KustomizationFile: "path/to/kustomization.yaml",
 		Image:             newImage,
 		NewTag:            newTag,
+		NewImage:          newImagePath,
 	})
 	if err != nil {
 		t.Fatalf("Failed updating kustomization.yaml: %s", err.Error())
@@ -65,8 +68,9 @@ func testUpdateKustomizationCommon(t *testing.T, kustomizeFile string) {
 
 	var partial struct {
 		Image []struct {
-			Name   string `yaml:"name"`
-			NewTag string `yaml:"newTag"`
+			Name     string `yaml:"name"`
+			NewTag   string `yaml:"newTag"`
+			NewImage string `yaml:"newImage"`
 		} `yaml:"images"`
 	}
 	err = yaml.Unmarshal(val, &partial)
@@ -84,6 +88,9 @@ func testUpdateKustomizationCommon(t *testing.T, kustomizeFile string) {
 	if partial.Image[0].NewTag != newTag {
 		t.Fatal("Image tag is different than expected")
 	}
+	if partial.Image[0].NewImage != newImagePath {
+		t.Fatal("Image tag is different than expected")
+	}
 }
 
 func TestUpdateKustomizationNoImages(t *testing.T) {
@@ -96,4 +103,60 @@ func TestUpdateKustomizationEmpty(t *testing.T) {
 
 func TestUpdateKustomizationExisting(t *testing.T) {
 	testUpdateKustomizationCommon(t, kustomizationExisting)
+}
+
+func TestUpdateHelmChartFaultyRepository(t *testing.T) {
+	brokenrepo := targets.NewInMemoryRepository(targets.FileList{
+		"non-yaml/values.yaml":            []byte{0xff, 0xd8, 0xff, 0xe0},
+		"broken-images/values.yaml":       []byte("images: 12"),
+		"broken-images-value/values.yaml": []byte("images:\n  - 12"),
+	})
+
+	// Test with inexistant file
+	_, err := kustomize_templater.UpdateKustomization(brokenrepo, kustomize_templater.KustomizeProviderOptions{
+		Ref:               "dummy",
+		KustomizationFile: "path/to/kustomization.yaml",
+		Image:             "test",
+		NewTag:            "tag",
+	})
+	if err == nil {
+		t.Fatal("Updating repo succeeded but the original file did not exist!")
+	} else {
+		if !errors.Is(err, targets.ErrFileNotFound) {
+			t.Fatalf("Unexpected error: %s", err.Error())
+		}
+	}
+
+	// Test with non-YAML file
+	_, err = kustomize_templater.UpdateKustomization(brokenrepo, kustomize_templater.KustomizeProviderOptions{
+		Ref:               "dummy",
+		KustomizationFile: "non-yaml/values.yaml",
+		Image:             "test",
+		NewTag:            "tag",
+	})
+	if err == nil {
+		t.Fatal("Updating repo succeeded but the original file is not a YAML file!")
+	}
+
+	// Test with invalid images path
+	_, err = kustomize_templater.UpdateKustomization(brokenrepo, kustomize_templater.KustomizeProviderOptions{
+		Ref:               "dummy",
+		KustomizationFile: "broken-images/values.yaml",
+		Image:             "test",
+		NewTag:            "tag",
+	})
+	if err == nil {
+		t.Fatal("Updating repo succeeded but the original file has an invalid format!")
+	}
+
+	// Test with invalid images array type
+	_, err = kustomize_templater.UpdateKustomization(brokenrepo, kustomize_templater.KustomizeProviderOptions{
+		Ref:               "dummy",
+		KustomizationFile: "broken-images-value/values.yaml",
+		Image:             "test",
+		NewTag:            "tag",
+	})
+	if err == nil {
+		t.Fatal("Updating repo succeeded but the original file has an invalid format!")
+	}
 }
