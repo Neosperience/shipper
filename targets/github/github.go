@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/neosperience/shipper/targets"
@@ -24,10 +23,7 @@ type GithubRepository struct {
 
 // NewAPIClient creates a GithubRepository instance
 func NewAPIClient(uri string, projectID string, credentials string) *GithubRepository {
-	var transport = &http.Transport{
-		IdleConnTimeout: 30 * time.Second,
-	}
-	var client = &http.Client{Transport: transport}
+	var client = &http.Client{}
 	return &GithubRepository{
 		baseURI:     uri,
 		projectID:   projectID,
