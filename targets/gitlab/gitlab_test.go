@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/neosperience/shipper/targets"
@@ -110,5 +111,39 @@ func TestGet(t *testing.T) {
 	}
 	if !bytes.Equal(byt, testData) {
 		t.Fatal("Expected file content is different from retrieved")
+	}
+}
+
+func TestFaultyServer(t *testing.T) {
+	// Mock server that just errors out
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		http.Error(rw, "Unauthorized", http.StatusUnauthorized)
+	}))
+	defer server.Close()
+	payload := targets.NewPayload("test-branch", "test-author <author@example.com>", "Hello")
+
+	// Test with erroring server
+	target := NewAPIClient(server.URL, "test-project", "unused")
+	target.client = server.Client()
+
+	if _, err := target.Get("test", "main"); err == nil {
+		t.Fatal("Request supposed to error out but Get call exited successfully")
+	}
+
+	if err := target.Commit(payload); err == nil {
+		t.Fatal("Request supposed to error out but Commit call exited successfully")
+	}
+
+	// Test with unreacheable target
+	target = NewAPIClient("http://0.0.0.0", "test-project", "unused")
+	target.client = server.Client()
+	target.client.Timeout = time.Millisecond // Set a low timeout since we don't want this to work anyway
+
+	if _, err := target.Get("test", "main"); err == nil {
+		t.Fatal("Request supposed to error out but Get call exited successfully")
+	}
+
+	if err := target.Commit(payload); err == nil {
+		t.Fatal("Request supposed to error out but Commit call exited successfully")
 	}
 }

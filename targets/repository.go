@@ -1,6 +1,8 @@
 package targets
 
-import "fmt"
+import (
+	"errors"
+)
 
 // Repository is a supported platform where we can push commits to
 type Repository interface {
@@ -10,6 +12,10 @@ type Repository interface {
 	// Commit creates a commit from a payload and pushes it to the repository
 	Commit(data *CommitPayload) error
 }
+
+var (
+	ErrFileNotFound = errors.New("file not found")
+)
 
 // InMemoryRepository is an in-memory implementation of Repository for testing
 type InMemoryRepository struct {
@@ -27,7 +33,7 @@ func (m *InMemoryRepository) Get(path string, ref string) ([]byte, error) {
 	// ref is ignored
 	file, ok := m.Files[path]
 	if !ok {
-		return nil, fmt.Errorf("file not found")
+		return nil, ErrFileNotFound
 	}
 
 	return file, nil
