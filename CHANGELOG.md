@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2022-02-28
+
 ### Added
 
 - Added support for GitHub as a git provider (`--repo-kind github`), works with both hosted GitHub and GitHub Enteprise Server.
@@ -24,5 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Helm as a templater
 - Support for Kustomize as a templater
 
-[unreleased]: https://github.com/neosperience/shipper/compare/0.1.0...HEAD
+[unreleased]: https://github.com/neosperience/shipper/compare/0.2.0...HEAD
+[0.2.0]: https://github.com/neosperience/shipper/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/neosperience/shipper/releases/tag/0.1.0
