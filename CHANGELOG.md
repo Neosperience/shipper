@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `--no-verify-tls` will make all HTTPS requests skip TLS cerficate validation (eg. for running selfsigned certificates)
+
+### Changed
+
+- Every HTTP request now uses the default Go transport options, most notably timeout is now 90 seconds instead of 30, plus a few extra sanity checks.
+
 ## [0.2.0] - 2022-02-28
 
 ### Added
