@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
 	"unicode/utf8"
 
 	jsoniter "github.com/json-iterator/go"
@@ -25,10 +24,7 @@ type GitlabRepository struct {
 
 // NewAPIClient creates a GitlabRepository instance
 func NewAPIClient(uri string, projectID string, key string) *GitlabRepository {
-	var transport = &http.Transport{
-		IdleConnTimeout: 30 * time.Second,
-	}
-	var client = &http.Client{Transport: transport}
+	var client = &http.Client{}
 	return &GitlabRepository{
 		baseURI:    uri,
 		projectID:  projectID,

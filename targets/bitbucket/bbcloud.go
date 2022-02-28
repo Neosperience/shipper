@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/neosperience/shipper/targets"
 )
@@ -23,10 +22,7 @@ type BitbucketCloudRepository struct {
 
 // NewCloudAPIClient creates a BitbucketCloudRepository instance
 func NewCloudAPIClient(projectID string, credentials string) *BitbucketCloudRepository {
-	var transport = &http.Transport{
-		IdleConnTimeout: 30 * time.Second,
-	}
-	var client = &http.Client{Transport: transport}
+	var client = &http.Client{}
 	return &BitbucketCloudRepository{
 		baseURI:     "https://api.bitbucket.org/2.0",
 		projectID:   projectID,

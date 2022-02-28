@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/urfave/cli/v2"
@@ -16,6 +18,12 @@ import (
 )
 
 func app(c *cli.Context) error {
+	// Modify default HTTP client transport to not check for certificates if asked to do so
+	insecureCert := c.Bool("no-verify-tls")
+	if insecureCert {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
 	// Create payload
 	payload := targets.NewPayload(c.String("repo-branch"), c.String("commit-author"), c.String("commit-message"))
 
@@ -155,6 +163,12 @@ func main() {
 				Usage:    "Container tag",
 				EnvVars:  []string{"SHIPPER_CONTAINER_TAG"},
 				Required: true,
+			},
+			&cli.BoolFlag{
+				Name:    "no-verify-tls",
+				Usage:   "If provided, skip X.509 certificate validation on HTTPS requests",
+				EnvVars: []string{"SHIPPER_NO_VERIFY_TLS"},
+				Value:   false,
 			},
 			// Helm options
 			&cli.StringFlag{
