@@ -17,8 +17,8 @@ Shipper automates this by leveraging the native Git provider API (e.g. GitLab, G
 ### Git Providers
 
 - [GitLab] (both self-managed and gitlab.com)
-- [GitHub] (planned)
-- [BitBucket] (planned)
+- [BitBucket] (only BitBucket cloud ie. bitbucket.org)
+- [GitHub] (both GitHub.com and GitHub Enteprise Server)
 
 ### Templaters
 
@@ -56,11 +56,17 @@ deploy-prod:
 
 ### Gitlab
 
-- When creating an access token for shipper, only the permission `api` is needed. (Role depends on your branch permissions, eg. protected branches)
+- When creating a [project access token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) for shipper, only the permission `api` is needed. (Role depends on your branch permissions, eg. protected branches)
+
+### GitHub
+
+- When creating a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) for shipper, only the permissions `repo` is needed.
+- The author string MUST be in the `John Doe <john.doe@example.com>` format or the commit will fail.
+- The GitHub Cloud API endpoint is `https://api.github.com`, however GitHub Enterprise Server will have something more akin to `https://HOSTNAME/api/v3`
 
 ### Bitbucket cloud
 
-- When creating an app password for shipper, only the permissions `repository:read` and `repository:write` are needed.
+- When creating an [app password](https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/) for shipper, only the permissions `repository:read` and `repository:write` are needed.
 - The author string MUST be in the `John Doe <john.doe@example.com>` format or the commit will fail.
 - Bitbucket cloud integration only works with Bitbucket cloud, Bitbucket server has completely different APIs.
 
