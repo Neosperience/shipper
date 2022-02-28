@@ -32,21 +32,33 @@ deploy-prod:
   image: ghcr.io/neosperience/shipper:main
   environment: prod
   script:
-  - |
-    shipper --templater helm \
-      --repo-kind gitlab \
-      --repo-branch main \
-      --commit-author "$GITLAB_USER_NAME <$GITLAB_USER_EMAIL>" \
-      --commit-message "Deploy new version" \
-      --container-image $CI_REGISTRY_IMAGE \
-      --container-tag  $CI_COMMIT_SHA \
-      --helm-values-file prod/values.yaml \
-      --helm-image-path image.repository \
-      --helm-tag-path image.tag \
-      --gitlab-endpoint $CI_API_V4_URL \
-      --gitlab-key $CI_JOB_TOKEN" \
-      --gitlab-project my-app/deployments
+    - |
+      shipper --templater helm \
+        --repo-kind gitlab \
+        --repo-branch main \
+        --commit-author "$GITLAB_USER_NAME <$GITLAB_USER_EMAIL>" \
+        --commit-message "Deploy new version" \
+        --container-image $CI_REGISTRY_IMAGE \
+        --container-tag  $CI_COMMIT_SHA \
+        --helm-values-file prod/values.yaml \
+        --helm-image-path image.repository \
+        --helm-tag-path image.tag \
+        --gitlab-endpoint $CI_API_V4_URL \
+        --gitlab-key $CI_JOB_TOKEN" \
+        --gitlab-project my-app/deployments
 ```
+
+## Provider notes
+
+### Gitlab
+
+- When creating an access token for shipper, only the permission `api` is needed. (Role depends on your branch permissions, eg. protected branches)
+
+### Bitbucket cloud
+
+- When creating an app password for shipper, only the permissions `repository:read` and `repository:write` are needed.
+- The author string MUST be in the `John Doe <john.doe@example.com>` format or the commit will fail.
+- Bitbucket cloud integration only works with Bitbucket cloud, Bitbucket server has completely different APIs.
 
 ## Contributing
 
@@ -74,13 +86,13 @@ limitations under the License.
 
 <a href="https://www.vecteezy.com/free-vector/ship">Logo by joezhuang on Vecteezy</a>
 
-[Neosperience]: https://neosperience.com
-[ArgoCD]: https://argoproj.github.io/cd
-[Karavel Container Platform]: https://platform.karavel.io
-[Helm]: https://helm.sh
-[Kustomize]: https://kustomize.io
-[GitLab]: https://gitlab.com
-[GitHub]: https://github.com
-[BitBucket]: https://bitbucket.com
-[Golang]: https://go.dev
-[SemVer]: https://semver.org/
+[neosperience]: https://neosperience.com
+[argocd]: https://argoproj.github.io/cd
+[karavel container platform]: https://platform.karavel.io
+[helm]: https://helm.sh
+[kustomize]: https://kustomize.io
+[gitlab]: https://gitlab.com
+[github]: https://github.com
+[bitbucket]: https://bitbucket.com
+[golang]: https://go.dev
+[semver]: https://semver.org/
