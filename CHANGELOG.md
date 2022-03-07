@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Support for Gitea as git provider (`--repo-kind gitea`)
+
+### Changed
+
+- Shipper now has some informational logs about its parameters and, if the git provider supports it, a URL to the commit that was created.
+
 ## [0.3.0] - 2022-02-28
 
 ### Added
