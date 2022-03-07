@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	gitea_target "github.com/neosperience/shipper/targets/gitea"
 	"github.com/urfave/cli/v2"
 
 	"github.com/neosperience/shipper/targets"
@@ -50,9 +51,20 @@ func app(c *cli.Context) error {
 		assert(project != "", "GitHub project ID must be specified when using GitHub")
 
 		apikey := c.String("github-key")
-		assert(apikey != "", "GitHub API key must be specified when using GitHub")
+		assert(apikey != "", "GitHub credentials must be specified when using GitHub")
 
 		repository = github_target.NewAPIClient(uri, project, apikey)
+	case "gitea":
+		uri := c.String("gitea-endpoint")
+		assert(uri != "", "Gitea endpoint must be specified when using Gitea")
+
+		project := c.String("gitea-project")
+		assert(project != "", "Gitea project ID must be specified when using Gitea")
+
+		apikey := c.String("gitea-key")
+		assert(apikey != "", "Gitea credentials must be specified when using Gitea")
+
+		repository = gitea_target.NewAPIClient(uri, project, apikey)
 	case "bitbucket-cloud":
 		creds := c.String("bitbucket-key")
 		assert(creds != "", "Bitbucket cloud credentials must be specified when using Bitbucket cloud")
@@ -129,7 +141,7 @@ func main() {
 				Name:     "repo-kind",
 				Aliases:  []string{"t"},
 				Value:    "gitlab",
-				Usage:    "Repository type (available: \"gitlab\", \"github\", \"bitbucket-cloud\")",
+				Usage:    "Repository type (available: \"gitlab\", \"github\", \"gitea\", \"bitbucket-cloud\")",
 				EnvVars:  []string{"SHIPPER_REPO_KIND"},
 				Required: true,
 			},
@@ -241,6 +253,26 @@ func main() {
 				Aliases: []string{"gh-pid"},
 				Usage:   "[github] Project ID in \"org/project\" format",
 				EnvVars: []string{"SHIPPER_GITHUB_PROJECT"},
+			},
+			// Gitea options
+			&cli.StringFlag{
+				Name:    "gitea-endpoint",
+				Aliases: []string{"ge-uri"},
+				Usage:   "[gitea] GitHub API endpoint (include \"/api/v1\")",
+				EnvVars: []string{"SHIPPER_GITEA_ENDPOINT"},
+				Value:   "https://api.github.com",
+			},
+			&cli.StringFlag{
+				Name:    "gitea-key",
+				Aliases: []string{"ge-key"},
+				Usage:   "[gitea] Username/application token pair in \"username:token\" format",
+				EnvVars: []string{"SHIPPER_GITEA_KEY"},
+			},
+			&cli.StringFlag{
+				Name:    "gitea-project",
+				Aliases: []string{"ge-pid"},
+				Usage:   "[gitea] Project ID in \"org/project\" format",
+				EnvVars: []string{"SHIPPER_GITEA_PROJECT"},
 			},
 			// Bitbucket options
 			&cli.StringFlag{

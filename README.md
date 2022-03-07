@@ -19,6 +19,7 @@ Shipper automates this by leveraging the native Git provider API (e.g. GitLab, G
 - [GitLab] (both self-managed and gitlab.com)
 - [BitBucket] (only BitBucket cloud ie. bitbucket.org)
 - [GitHub] (both GitHub.com and GitHub Enteprise Server)
+- [Gitea]
 
 ### Templaters
 
@@ -54,7 +55,7 @@ deploy-prod:
 
 ## Provider notes
 
-### Gitlab
+### GitLab
 
 - When creating a [project access token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) for shipper, only the permission `api` is needed. (Role depends on your branch permissions, eg. protected branches)
 
@@ -63,6 +64,7 @@ deploy-prod:
 - When creating a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) for shipper, only the permissions `repo` is needed.
 - The author string MUST be in the `John Doe <john.doe@example.com>` format or the commit will fail.
 - The GitHub Cloud API endpoint is `https://api.github.com`, however GitHub Enterprise Server will have something more akin to `https://HOSTNAME/api/v3`
+
 
 ### Bitbucket cloud
 
@@ -103,6 +105,7 @@ limitations under the License.
 [kustomize]: https://kustomize.io
 [gitlab]: https://gitlab.com
 [github]: https://github.com
+[gitea]: https://gitea.com
 [bitbucket]: https://bitbucket.com
 [golang]: https://go.dev
 [semver]: https://semver.org/
