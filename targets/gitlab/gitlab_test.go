@@ -60,6 +60,11 @@ func TestCommit(t *testing.T) {
 				}
 			}
 		}
+		_ = jsoniter.ConfigFastest.NewEncoder(rw).Encode(struct {
+			WebURL string `json:"web_url"`
+		}{
+			WebURL: "https://gitlab.com/path/to/test-project/blob/main/path/to/test-key",
+		})
 	}))
 	defer server.Close()
 	target := NewAPIClient(server.URL, "test-project", testKey)

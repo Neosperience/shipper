@@ -79,6 +79,16 @@ func TestCommit(t *testing.T) {
 		if !bytes.Equal(byt, commit.Files[file]) {
 			t.Fatal("Decoded file content doesn't match expected")
 		}
+
+		_ = jsoniter.ConfigFastest.NewEncoder(rw).Encode(struct {
+			Commit interface{} `json:"commit"`
+		}{
+			Commit: struct {
+				HTMLURL string `json:"html_url"`
+			}{
+				HTMLURL: "https://github.com/test-user/test-repo/commit/testsha",
+			},
+		})
 	}))
 	defer server.Close()
 	target := NewAPIClient(server.URL, "test-project", fmt.Sprintf("%s:%s", testUser, testKey))

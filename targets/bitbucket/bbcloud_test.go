@@ -43,6 +43,8 @@ func TestCommit(t *testing.T) {
 		assertExpected(t, req.Form.Get("author"), commit.Author, "Form author doesn't match expected commit author")
 		assertExpected(t, req.Form.Get("branch"), commit.Branch, "Form branch doesn't match expected commit branch")
 		assertExpected(t, req.Form.Get("message"), commit.Message, "Form message doesn't match expected commit message")
+
+		rw.Header().Set("Location", "https://bitbucket.org/test-user/test-repo/commits/test-commit")
 	}))
 	defer server.Close()
 	target := NewCloudAPIClient("test-project", fmt.Sprintf("%s:%s", testUser, testKey))
