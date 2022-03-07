@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	jsoniter "github.com/json-iterator/go"
+
 	"github.com/neosperience/shipper/targets"
 )
 

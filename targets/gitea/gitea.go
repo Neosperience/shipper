@@ -1,4 +1,4 @@
-package github_target
+package gitea_target
 
 import (
 	"bytes"
@@ -14,8 +14,8 @@ import (
 	"github.com/neosperience/shipper/targets"
 )
 
-// GithubRepository commits to a GitHub repository using the GitHub REST Commits APIs
-type GithubRepository struct {
+// GiteaRepository commits to a Gitea repository using the Gitea REST Commits APIs
+type GiteaRepository struct {
 	baseURI     string
 	projectID   string
 	credentials string
@@ -23,10 +23,10 @@ type GithubRepository struct {
 	client *http.Client
 }
 
-// NewAPIClient creates a GithubRepository instance
-func NewAPIClient(uri string, projectID string, credentials string) *GithubRepository {
+// NewAPIClient creates a GiteaRepository instance
+func NewAPIClient(uri string, projectID string, credentials string) *GiteaRepository {
 	var client = &http.Client{}
-	return &GithubRepository{
+	return &GiteaRepository{
 		baseURI:     uri,
 		projectID:   projectID,
 		credentials: credentials,
@@ -34,15 +34,15 @@ func NewAPIClient(uri string, projectID string, credentials string) *GithubRepos
 	}
 }
 
-func (gh *GithubRepository) Get(path string, ref string) ([]byte, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/repos/%s/contents/%s?ref=%s", gh.baseURI, gh.projectID, path, url.QueryEscape(ref)), nil)
+func (ge *GiteaRepository) Get(path string, ref string) ([]byte, error) {
+	requestURI := fmt.Sprintf("%s/repos/%s/raw/%s?ref=%s", ge.baseURI, ge.projectID, path, url.QueryEscape(ref))
+	req, err := http.NewRequest("GET", requestURI, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
-	req.Header.Add("Accept", "application/vnd.github.v3.raw")
-	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(gh.credentials)))
+	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(ge.credentials)))
 
-	res, err := gh.client.Do(req)
+	res, err := ge.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error performing request: %w", err)
 	}
@@ -56,15 +56,15 @@ func (gh *GithubRepository) Get(path string, ref string) ([]byte, error) {
 	return ioutil.ReadAll(res.Body)
 }
 
-func (gh *GithubRepository) getFileSHA(path, branch string) (string, bool, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/repos/%s/contents/%s?ref=%s", gh.baseURI, gh.projectID, path, url.QueryEscape(branch)), nil)
+func (ge *GiteaRepository) getFileSHA(path, branch string) (string, bool, error) {
+	requestURI := fmt.Sprintf("%s/repos/%s/contents/%s?ref=%s", ge.baseURI, ge.projectID, path, url.QueryEscape(branch))
+	req, err := http.NewRequest("GET", requestURI, nil)
 	if err != nil {
 		return "", false, fmt.Errorf("error creating request: %w", err)
 	}
-	req.Header.Add("Accept", "application/vnd.github.v3+json")
-	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(gh.credentials)))
+	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(ge.credentials)))
 
-	res, err := gh.client.Do(req)
+	res, err := ge.client.Do(req)
 	if err != nil {
 		return "", false, fmt.Errorf("error performing request: %w", err)
 	}
@@ -98,19 +98,19 @@ type CommitDataAuthor struct {
 }
 
 type CommitData struct {
-	Message   string           `json:"message"`
-	Content   string           `json:"content"`
-	Branch    string           `json:"branch"`
-	SHA       string           `json:"sha,omitempty"`
-	Committer CommitDataAuthor `json:"committer"`
+	Message string           `json:"message"`
+	Content string           `json:"content"`
+	Branch  string           `json:"branch"`
+	SHA     string           `json:"sha,omitempty"`
+	Author  CommitDataAuthor `json:"author"`
 }
 
-func (gh *GithubRepository) Commit(payload *targets.CommitPayload) error {
+func (ge *GiteaRepository) Commit(payload *targets.CommitPayload) error {
 	author, email := payload.SplitAuthor()
 
 	for path, file := range payload.Files {
 		// Get original file, if exists, for the original file's SHA
-		sha, _, err := gh.getFileSHA(path, payload.Branch)
+		sha, _, err := ge.getFileSHA(path, payload.Branch)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve file SHA: %w", err)
 		}
@@ -119,7 +119,7 @@ func (gh *GithubRepository) Commit(payload *targets.CommitPayload) error {
 		err = jsoniter.ConfigFastest.NewEncoder(b).Encode(CommitData{
 			Branch:  payload.Branch,
 			Message: payload.Message,
-			Committer: CommitDataAuthor{
+			Author: CommitDataAuthor{
 				Name:  author,
 				Email: email,
 			},
@@ -130,15 +130,15 @@ func (gh *GithubRepository) Commit(payload *targets.CommitPayload) error {
 			return fmt.Errorf("failed to encode commit payload: %w", err)
 		}
 
-		req, err := http.NewRequest("PUT", fmt.Sprintf("%s/repos/%s/contents/%s", gh.baseURI, gh.projectID, path), b)
+		putURI := fmt.Sprintf("%s/repos/%s/contents/%s", ge.baseURI, ge.projectID, path)
+		req, err := http.NewRequest("PUT", putURI, b)
 		if err != nil {
 			return fmt.Errorf("error creating request: %w", err)
 		}
 		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Accept", "application/vnd.github.v3+json")
-		req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(gh.credentials)))
+		req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(ge.credentials)))
 
-		res, err := gh.client.Do(req)
+		res, err := ge.client.Do(req)
 		if err != nil {
 			return fmt.Errorf("error performing request: %w", err)
 		}
