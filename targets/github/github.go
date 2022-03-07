@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-
 	jsoniter "github.com/json-iterator/go"
 	"github.com/neosperience/shipper/targets"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
 )
 
 // GithubRepository commits to a GitHub repository using the GitHub REST Commits APIs
@@ -146,6 +146,18 @@ func (gh *GithubRepository) Commit(payload *targets.CommitPayload) error {
 			body, _ := ioutil.ReadAll(res.Body)
 			return fmt.Errorf("request returned error: %s", body)
 		}
+
+		var response struct {
+			Commit struct {
+				HTMLURL string `json:"html_url"`
+			} `json:"commit"`
+		}
+		err = jsoniter.ConfigFastest.NewDecoder(res.Body).Decode(&response)
+		if err != nil {
+			return fmt.Errorf("error decoding response body: %w", err)
+		}
+
+		log.Printf("Commit URL: %s", response.Commit.HTMLURL)
 	}
 
 	return nil
