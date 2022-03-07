@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"unicode/utf8"
@@ -143,6 +144,16 @@ func (gl *GitlabRepository) Commit(payload *targets.CommitPayload) error {
 		body, _ := ioutil.ReadAll(res.Body)
 		return fmt.Errorf("request returned error: %s", body)
 	}
+
+	var response struct {
+		WebURL string `json:"web_url"`
+	}
+	err = jsoniter.ConfigFastest.NewDecoder(res.Body).Decode(&response)
+	if err != nil {
+		return fmt.Errorf("error decoding response: %w", err)
+	}
+
+	log.Printf("Commit URL: %s", response.WebURL)
 
 	return nil
 }

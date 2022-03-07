@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -79,6 +80,8 @@ func (bb *BitbucketCloudRepository) Commit(payload *targets.CommitPayload) error
 		body, _ := ioutil.ReadAll(res.Body)
 		return fmt.Errorf("request returned error: %s", body)
 	}
+
+	log.Printf("Commit URL (API): %s", res.Header.Get("Location"))
 
 	return nil
 }

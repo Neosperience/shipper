@@ -67,6 +67,8 @@ func app(c *cli.Context) error {
 
 	// Get provider to use
 	templater := c.String("templater")
+	image := c.String("container-image")
+	tag := c.String("container-tag")
 	switch templater {
 	case "helm":
 		valuesFile := c.String("helm-values-file")
@@ -75,15 +77,15 @@ func app(c *cli.Context) error {
 		newfiles, err := helm_templater.UpdateHelmChart(repository, helm_templater.HelmProviderOptions{
 			ValuesFile: valuesFile,
 			Ref:        c.String("repo-branch"),
-			Image:      c.String("container-image"),
+			Image:      image,
 			ImagePath:  c.String("helm-image-path"),
-			Tag:        c.String("container-tag"),
+			Tag:        tag,
 			TagPath:    c.String("helm-tag-path"),
 		})
 		if err != nil {
 			return err
 		}
-		payload.Files.Add(newfiles)
+		_ = payload.Files.Add(newfiles)
 	case "kustomize":
 		kustomizationFile := c.String("kustomize-file")
 		assert(kustomizationFile != "", "kustomization.yaml path must be specified when using Kustomize")
@@ -91,13 +93,13 @@ func app(c *cli.Context) error {
 		newfiles, err := kustomize_templater.UpdateKustomization(repository, kustomize_templater.KustomizeProviderOptions{
 			KustomizationFile: kustomizationFile,
 			Ref:               c.String("repo-branch"),
-			Image:             c.String("container-image"),
-			NewTag:            c.String("container-tag"),
+			Image:             image,
+			NewTag:            tag,
 		})
 		if err != nil {
 			return err
 		}
-		payload.Files.Add(newfiles)
+		_ = payload.Files.Add(newfiles)
 	default:
 		return fmt.Errorf("templater option not supported: %s", templater)
 	}
@@ -106,6 +108,8 @@ func app(c *cli.Context) error {
 		log.Println("no changes to commit, exiting")
 		return nil
 	}
+
+	log.Printf("Pushing changes\nImage: %s\nTag: %s\n%s", image, tag, payload)
 
 	return repository.Commit(payload)
 }
