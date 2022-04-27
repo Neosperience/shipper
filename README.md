@@ -53,6 +53,27 @@ deploy-prod:
         --gitlab-project my-app/deployments
 ```
 
+### Updating multiple images at once
+
+Command line arguments `--container-image`, `--container-tag`, `--helm-values-file`, `--helm-image-path`, `--helm-tag-path` and `--kustomize-file` can be specified multiple times to update multiple images at once. If using the environment variables, these values are comma-separated (eg. `CONTAINER_IMAGES=image1,image2`).
+
+This is an example of updating multiple images at once:
+
+```bash
+shipper -p helm --helm-values-file helm/values.yml \
+  --helm-image-path image.repository --helm-tag-path image.tag --container-image img1 --container-tag tag1 \
+  --helm-image-path image2.repository --helm-tag-path image2.tag --container-image img2 --container-tag tag2 \
+  ... \
+  --repo-branch master --commit-author "Test" ...
+```
+
+You can mix & match which to specify once and which to specify many times, but every tag *must* be specified either 1 or N times, with some exceptions where closely-related tags must always be both specified the same amount of times, for example:
+
+- ✔️ one `--helm-values-file` but many `--helm-image-path` (all changes will be applied to the same YAML file)
+- ✔️ many `--helm-values-file` and `--helm-image-path` (every change will be applied to a specific file, the same file can be specified multiple times)
+- ❌ 3 instances of `--helm-image-path` but 2 instances of `--helm-values-file`
+- ❌ non-equal amount of `--container-image`, `--container-tag`, `--helm-image-path`, `--helm-tag-path`
+
 ## Provider notes
 
 ### GitLab
