@@ -41,6 +41,30 @@ replicas:
     count: 2
 `
 
+const kustomizationMultiple = `apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: nspod
+resources:
+- ../base
+- ingress.yml
+- secrets.yml
+
+configMapGenerator:
+- literals:
+  - LOG_LEVEL=debug
+  name: svc-config
+
+images:
+- name: git.org/myorg/myrepo
+  newTag: bbaaff
+- name: git.org/myorg/secondrepo
+  newTag: other
+
+replicas:
+  - name: svc
+    count: 2
+`
+
 func testUpdateKustomizationCommon(t *testing.T, kustomizeFile string) {
 	newImage := "git.org/myorg/myrepo"
 	newTag := "2022-02-22"
@@ -178,5 +202,65 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("Updating repo succeeded but the original file has an invalid format!")
+	}
+}
+
+func TestMultipleUpdatesInOneFile(t *testing.T) {
+	repo := targets.NewInMemoryRepository(targets.FileList{
+		"path/to/kustomization.yaml": []byte(kustomizationMultiple),
+	})
+
+	updates := []kustomize_templater.KustomizeUpdate{
+		{
+			KustomizationFile: "path/to/kustomization.yaml",
+			Image:             "git.org/myorg/myrepo",
+			NewTag:            "new-tag",
+		},
+		{
+			KustomizationFile: "path/to/kustomization.yaml",
+			Image:             "git.org/myorg/thirdrepo",
+			NewTag:            "tag2",
+		},
+	}
+
+	commitData, err := kustomize_templater.UpdateKustomization(repo, kustomize_templater.KustomizeProviderOptions{
+		Ref:     "dummy",
+		Updates: updates,
+	})
+	if err != nil {
+		t.Fatalf("Failed updating kustomization.yaml: %s", err.Error())
+	}
+
+	val, ok := commitData["path/to/kustomization.yaml"]
+	if !ok {
+		t.Fatal("Expected kustomization.yaml to be modified but wasn't found")
+	}
+
+	var partial struct {
+		Image []struct {
+			Name   string `yaml:"name"`
+			NewTag string `yaml:"newTag"`
+		} `yaml:"images"`
+	}
+	err = yaml.Unmarshal(val, &partial)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal committed file: %s", err.Error())
+	}
+
+	if len(partial.Image) != 3 {
+		t.Fatalf("Expected 3 images but found %d", len(partial.Image))
+	}
+
+	if partial.Image[0].Name != updates[0].Image {
+		t.Fatal("Updated image name is different than expected")
+	}
+	if partial.Image[0].NewTag != updates[0].NewTag {
+		t.Fatal("Updated image tag is different than expected")
+	}
+	if partial.Image[2].Name != updates[1].Image {
+		t.Fatal("New image name is different than expected")
+	}
+	if partial.Image[2].NewTag != updates[1].NewTag {
+		t.Fatal("New image tag is different than expected")
 	}
 }
