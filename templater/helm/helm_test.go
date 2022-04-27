@@ -248,3 +248,95 @@ func TestUpdateHelmChartNoChanges(t *testing.T) {
 		t.Fatalf("Found %d changes but commit was expected to be empty", len(commitData))
 	}
 }
+
+func TestUpdateMultipleImages(t *testing.T) {
+	repo := targets.NewInMemoryRepository(targets.FileList{
+		"path/to/values.yaml": []byte(`image:
+    pullPolicy: IfNotPresent
+    repository: somerandom.tld/org/name
+    tag: latest
+`),
+		"path/to/other-values.yaml": []byte(`
+`),
+	})
+
+	updates := []helm_templater.HelmUpdate{
+		{
+			ValuesFile: "path/to/values.yaml",
+			ImagePath:  "image.repository",
+			Image:      "somerandom.tld/org/name",
+			TagPath:    "image.tag",
+			Tag:        "latest",
+		},
+		{
+			ValuesFile: "path/to/values.yaml",
+			ImagePath:  "image2.repository",
+			Image:      "somerandom.tld/org/othername",
+			TagPath:    "image2.tag",
+			Tag:        "new",
+		},
+		{
+			ValuesFile: "path/to/other-values.yaml",
+			ImagePath:  "image.repository",
+			Image:      "somerandom.tld/org/thirdrepo",
+			TagPath:    "image.tag",
+			Tag:        "1.0",
+		},
+	}
+
+	commitData, err := helm_templater.UpdateHelmChart(repo, helm_templater.HelmProviderOptions{
+		Ref:     "main",
+		Updates: updates,
+	})
+	if err != nil {
+		t.Fatalf("Failed updating values.yaml: %s", err)
+	}
+
+	valuesFile, ok := commitData["path/to/values.yaml"]
+	if !ok {
+		t.Fatal("Failed to find values.yaml in commit data")
+	}
+
+	var parsedValues struct {
+		Image struct {
+			Repository string `yaml:"repository"`
+			Tag        string `yaml:"tag"`
+		} `yaml:"image"`
+		Image2 struct {
+			Repository string `yaml:"repository"`
+			Tag        string `yaml:"tag"`
+		} `yaml:"image2"`
+	}
+	err = yaml.Unmarshal(valuesFile, &parsedValues)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal values.yaml: %s", err)
+	}
+
+	if parsedValues.Image.Repository != updates[0].Image {
+		t.Fatalf("Expected first image repository to be %s but got %s", updates[0].Image, parsedValues.Image.Repository)
+	}
+	if parsedValues.Image.Tag != updates[0].Tag {
+		t.Fatalf("Expected first image tag to be %s but got %s", updates[0].Tag, parsedValues.Image.Tag)
+	}
+	if parsedValues.Image2.Repository != updates[1].Image {
+		t.Fatalf("Expected second image repository to be %s but got %s", updates[1].Image, parsedValues.Image2.Repository)
+	}
+	if parsedValues.Image.Tag != updates[0].Tag {
+		t.Fatalf("Expected second image tag to be %s but got %s", updates[1].Tag, parsedValues.Image2.Tag)
+	}
+
+	otherValuesFile, ok := commitData["path/to/other-values.yaml"]
+	if !ok {
+		t.Fatal("Failed to find other-values.yaml in commit data")
+	}
+	err = yaml.Unmarshal(otherValuesFile, &parsedValues)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal values.yaml: %s", err)
+	}
+	if parsedValues.Image.Repository != updates[2].Image {
+		t.Fatalf("Expected third image repository to be %s but got %s", updates[2].Image, parsedValues.Image.Repository)
+	}
+	if parsedValues.Image.Tag != updates[2].Tag {
+		t.Fatalf("Expected third image tag to be %s but got %s", updates[2].Tag, parsedValues.Image.Tag)
+	}
+}
