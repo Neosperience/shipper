@@ -51,11 +51,15 @@ func testUpdateKustomizationCommon(t *testing.T, kustomizeFile string) {
 	})
 
 	commitData, err := kustomize_templater.UpdateKustomization(repo, kustomize_templater.KustomizeProviderOptions{
-		Ref:               "dummy",
-		KustomizationFile: "path/to/kustomization.yaml",
-		Image:             newImage,
-		NewTag:            newTag,
-		NewImage:          newImagePath,
+		Ref: "dummy",
+		Updates: []kustomize_templater.KustomizeUpdate{
+			{
+				KustomizationFile: "path/to/kustomization.yaml",
+				Image:             newImage,
+				NewTag:            newTag,
+				NewImage:          newImagePath,
+			},
+		},
 	})
 	if err != nil {
 		t.Fatalf("Failed updating kustomization.yaml: %s", err.Error())
@@ -114,10 +118,14 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 
 	// Test with inexistant file
 	_, err := kustomize_templater.UpdateKustomization(brokenrepo, kustomize_templater.KustomizeProviderOptions{
-		Ref:               "dummy",
-		KustomizationFile: "path/to/kustomization.yaml",
-		Image:             "test",
-		NewTag:            "tag",
+		Ref: "dummy",
+		Updates: []kustomize_templater.KustomizeUpdate{
+			{
+				KustomizationFile: "path/to/kustomization.yaml",
+				Image:             "test",
+				NewTag:            "tag",
+			},
+		},
 	})
 	if err == nil {
 		t.Fatal("Updating repo succeeded but the original file did not exist!")
@@ -129,10 +137,14 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 
 	// Test with non-YAML file
 	_, err = kustomize_templater.UpdateKustomization(brokenrepo, kustomize_templater.KustomizeProviderOptions{
-		Ref:               "dummy",
-		KustomizationFile: "non-yaml/values.yaml",
-		Image:             "test",
-		NewTag:            "tag",
+		Ref: "dummy",
+		Updates: []kustomize_templater.KustomizeUpdate{
+			{
+				KustomizationFile: "non-yaml/values.yaml",
+				Image:             "test",
+				NewTag:            "tag",
+			},
+		},
 	})
 	if err == nil {
 		t.Fatal("Updating repo succeeded but the original file is not a YAML file!")
@@ -140,10 +152,14 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 
 	// Test with invalid images path
 	_, err = kustomize_templater.UpdateKustomization(brokenrepo, kustomize_templater.KustomizeProviderOptions{
-		Ref:               "dummy",
-		KustomizationFile: "broken-images/values.yaml",
-		Image:             "test",
-		NewTag:            "tag",
+		Ref: "dummy",
+		Updates: []kustomize_templater.KustomizeUpdate{
+			{
+				KustomizationFile: "broken-images/values.yaml",
+				Image:             "test",
+				NewTag:            "tag",
+			},
+		},
 	})
 	if err == nil {
 		t.Fatal("Updating repo succeeded but the original file has an invalid format!")
@@ -151,10 +167,14 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 
 	// Test with invalid images array type
 	_, err = kustomize_templater.UpdateKustomization(brokenrepo, kustomize_templater.KustomizeProviderOptions{
-		Ref:               "dummy",
-		KustomizationFile: "broken-images-value/values.yaml",
-		Image:             "test",
-		NewTag:            "tag",
+		Ref: "dummy",
+		Updates: []kustomize_templater.KustomizeUpdate{
+			{
+				KustomizationFile: "broken-images-value/values.yaml",
+				Image:             "test",
+				NewTag:            "tag",
+			},
+		},
 	})
 	if err == nil {
 		t.Fatal("Updating repo succeeded but the original file has an invalid format!")

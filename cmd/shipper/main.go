@@ -7,16 +7,22 @@ import (
 	"net/http"
 	"os"
 
-	gitea_target "github.com/neosperience/shipper/targets/gitea"
-	"github.com/urfave/cli/v2"
-
 	"github.com/neosperience/shipper/targets"
 	bitbucket_target "github.com/neosperience/shipper/targets/bitbucket"
+	gitea_target "github.com/neosperience/shipper/targets/gitea"
 	github_target "github.com/neosperience/shipper/targets/github"
 	gitlab_target "github.com/neosperience/shipper/targets/gitlab"
 	helm_templater "github.com/neosperience/shipper/templater/helm"
 	kustomize_templater "github.com/neosperience/shipper/templater/kustomize"
+	"github.com/urfave/cli/v2"
 )
+
+func oneOrMany[T any](arr []T, index int) T {
+	if len(arr) == 1 {
+		return arr[0]
+	}
+	return arr[index]
+}
 
 func app(c *cli.Context) error {
 	// Modify default HTTP client transport to not check for certificates if asked to do so
@@ -79,39 +85,62 @@ func app(c *cli.Context) error {
 
 	// Get provider to use
 	templater := c.String("templater")
-	image := c.String("container-image")
-	tag := c.String("container-tag")
+	branch := c.String("repo-branch")
+
+	images := c.StringSlice("container-image")
+	tags := c.StringSlice("container-tag")
+	assert(len(images) == len(tags), "An equal number of --container-image and --container-tag must be specified")
+
 	switch templater {
 	case "helm":
-		valuesFile := c.String("helm-values-file")
-		assert(valuesFile != "", "values.yaml path must be specified when using Helm")
+		valuesFile := c.StringSlice("helm-values-file")
+		assert(valuesFile != nil && len(valuesFile) > 0, "values.yaml path must be specified when using Helm")
+		imagePaths := c.StringSlice("helm-image-path")
+		tagPaths := c.StringSlice("helm-tag-path")
 
-		newfiles, err := helm_templater.UpdateHelmChart(repository, helm_templater.HelmProviderOptions{
-			ValuesFile: valuesFile,
-			Ref:        c.String("repo-branch"),
-			Image:      image,
-			ImagePath:  c.String("helm-image-path"),
-			Tag:        tag,
-			TagPath:    c.String("helm-tag-path"),
+		assert(len(tagPaths) == len(imagePaths), "An equal number of --helm-image-path and --helm-tag-path must be specified")
+		assert(len(imagePaths) == 1 || len(imagePaths) == len(images), "There can on be either one global --helm-image-path or one per each --container-image")
+
+		updates := make([]helm_templater.HelmUpdate, len(images))
+		for index := 0; index < len(images); index += 1 {
+			updates[index] = helm_templater.HelmUpdate{
+				ValuesFile: oneOrMany(valuesFile, index),
+				Image:      oneOrMany(images, index),
+				Tag:        oneOrMany(tags, index),
+				ImagePath:  oneOrMany(imagePaths, index),
+				TagPath:    oneOrMany(tagPaths, index),
+			}
+		}
+
+		newFiles, err := helm_templater.UpdateHelmChart(repository, helm_templater.HelmProviderOptions{
+			Ref:     branch,
+			Updates: updates,
 		})
 		if err != nil {
 			return err
 		}
-		_ = payload.Files.Add(newfiles)
+		_ = payload.Files.Add(newFiles)
 	case "kustomize":
-		kustomizationFile := c.String("kustomize-file")
-		assert(kustomizationFile != "", "kustomization.yaml path must be specified when using Kustomize")
+		kustomizationFiles := c.StringSlice("kustomize-file")
+		assert(kustomizationFiles != nil && len(kustomizationFiles) > 0, "kustomization.yaml path must be specified when using Kustomize")
 
-		newfiles, err := kustomize_templater.UpdateKustomization(repository, kustomize_templater.KustomizeProviderOptions{
-			KustomizationFile: kustomizationFile,
-			Ref:               c.String("repo-branch"),
-			Image:             image,
-			NewTag:            tag,
+		updates := make([]kustomize_templater.KustomizeUpdate, len(images))
+		for index := 0; index < len(images); index += 1 {
+			updates[index] = kustomize_templater.KustomizeUpdate{
+				KustomizationFile: oneOrMany(kustomizationFiles, index),
+				Image:             oneOrMany(images, index),
+				NewTag:            oneOrMany(tags, index),
+			}
+		}
+
+		newFiles, err := kustomize_templater.UpdateKustomization(repository, kustomize_templater.KustomizeProviderOptions{
+			Ref:     branch,
+			Updates: updates,
 		})
 		if err != nil {
 			return err
 		}
-		_ = payload.Files.Add(newfiles)
+		_ = payload.Files.Add(newFiles)
 	default:
 		return fmt.Errorf("templater option not supported: %s", templater)
 	}
@@ -121,7 +150,7 @@ func app(c *cli.Context) error {
 		return nil
 	}
 
-	log.Printf("Pushing changes\nImage: %s\nTag: %s\n%s", image, tag, payload)
+	log.Printf("Pushing changes\n%s", payload)
 
 	return repository.Commit(payload)
 }
@@ -166,14 +195,14 @@ func main() {
 				EnvVars: []string{"SHIPPER_COMMIT_MESSAGE"},
 				Value:   "Deploy",
 			},
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:     "container-image",
 				Aliases:  []string{"ci"},
 				Usage:    "Container image",
 				EnvVars:  []string{"SHIPPER_CONTAINER_IMAGE"},
 				Required: true,
 			},
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:     "container-tag",
 				Aliases:  []string{"ct"},
 				Usage:    "Container tag",
@@ -187,25 +216,25 @@ func main() {
 				Value:   false,
 			},
 			// Helm options
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:    "helm-values-file",
 				Aliases: []string{"hpath"},
 				Usage:   "[helm] Path to values.yaml file",
 				EnvVars: []string{"SHIPPER_HELM_VALUES_FILE"},
 			},
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:    "helm-image-path",
 				Aliases: []string{"himg"},
 				Usage:   "[helm] Container image path",
 				EnvVars: []string{"SHIPPER_HELM_IMAGE_PATH"},
-				Value:   "image.repository",
+				Value:   cli.NewStringSlice("image.repository"),
 			},
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:    "helm-tag-path",
 				Aliases: []string{"htag"},
 				Usage:   "[helm] Container tag path",
 				EnvVars: []string{"SHIPPER_HELM_TAG_PATH"},
-				Value:   "image.tag",
+				Value:   cli.NewStringSlice("image.tag"),
 			},
 			// Kustomize options
 			&cli.StringFlag{

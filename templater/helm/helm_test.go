@@ -83,12 +83,16 @@ func testUpdateHelmChart(t *testing.T, file string) {
 	})
 
 	commitData, err := helm_templater.UpdateHelmChart(repo, helm_templater.HelmProviderOptions{
-		Ref:        "main",
-		ValuesFile: "path/to/values.yaml",
-		ImagePath:  "image.repository",
-		Image:      newImage,
-		TagPath:    "image.tag",
-		Tag:        newTag,
+		Ref: "main",
+		Updates: []helm_templater.HelmUpdate{
+			{
+				ValuesFile: "path/to/values.yaml",
+				ImagePath:  "image.repository",
+				Image:      newImage,
+				TagPath:    "image.tag",
+				Tag:        newTag,
+			},
+		},
 	})
 	if err != nil {
 		t.Fatalf("Failed updating values.yaml: %s", err)
@@ -135,12 +139,16 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 
 	// Test with inexistant file
 	_, err := helm_templater.UpdateHelmChart(brokenrepo, helm_templater.HelmProviderOptions{
-		Ref:        "main",
-		ValuesFile: "inexistant-path/values.yaml",
-		ImagePath:  "image.repository",
-		Image:      "test",
-		TagPath:    "image.tag",
-		Tag:        "test",
+		Ref: "main",
+		Updates: []helm_templater.HelmUpdate{
+			{
+				ValuesFile: "inexistant-path/values.yaml",
+				ImagePath:  "image.repository",
+				Image:      "test",
+				TagPath:    "image.tag",
+				Tag:        "test",
+			},
+		},
 	})
 	if err == nil {
 		t.Fatal("Updating repo succeeded but the original file did not exist!")
@@ -152,12 +160,16 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 
 	// Test with non-YAML file
 	_, err = helm_templater.UpdateHelmChart(brokenrepo, helm_templater.HelmProviderOptions{
-		Ref:        "main",
-		ValuesFile: "non-yaml/values.yaml",
-		ImagePath:  "image.repository",
-		Image:      "test",
-		TagPath:    "image.tag",
-		Tag:        "test",
+		Ref: "main",
+		Updates: []helm_templater.HelmUpdate{
+			{
+				ValuesFile: "non-yaml/values.yaml",
+				ImagePath:  "image.repository",
+				Image:      "test",
+				TagPath:    "image.tag",
+				Tag:        "test",
+			},
+		},
 	})
 	if err == nil {
 		t.Fatal("Updating repo succeeded but the original file is not a YAML file!")
@@ -165,12 +177,16 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 
 	// Test with invalid image path
 	_, err = helm_templater.UpdateHelmChart(brokenrepo, helm_templater.HelmProviderOptions{
-		Ref:        "main",
-		ValuesFile: "broken-image/values.yaml",
-		ImagePath:  "image.name",
-		Image:      "test",
-		TagPath:    "tag.name",
-		Tag:        "test",
+		Ref: "main",
+		Updates: []helm_templater.HelmUpdate{
+			{
+				ValuesFile: "broken-image/values.yaml",
+				ImagePath:  "image.name",
+				Image:      "test",
+				TagPath:    "tag.name",
+				Tag:        "test",
+			},
+		},
 	})
 	if err == nil {
 		t.Fatal("Updating repo succeeded but the original file has an invalid format!")
@@ -182,12 +198,16 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 
 	// Test with invalid tag path
 	_, err = helm_templater.UpdateHelmChart(brokenrepo, helm_templater.HelmProviderOptions{
-		Ref:        "main",
-		ValuesFile: "broken-tag/values.yaml",
-		ImagePath:  "image.name",
-		Image:      "test",
-		TagPath:    "tag.name",
-		Tag:        "test",
+		Ref: "main",
+		Updates: []helm_templater.HelmUpdate{
+			{
+				ValuesFile: "broken-tag/values.yaml",
+				ImagePath:  "image.name",
+				Image:      "test",
+				TagPath:    "tag.name",
+				Tag:        "test",
+			},
+		},
 	})
 	if err == nil {
 		t.Fatal("Updating repo succeeded but the original file has an invalid format!")
@@ -209,12 +229,16 @@ func TestUpdateHelmChartNoChanges(t *testing.T) {
 	})
 
 	commitData, err := helm_templater.UpdateHelmChart(repo, helm_templater.HelmProviderOptions{
-		Ref:        "main",
-		ValuesFile: "path/to/values.yaml",
-		ImagePath:  "image.repository",
-		Image:      "somerandom.tld/org/name",
-		TagPath:    "image.tag",
-		Tag:        "latest",
+		Ref: "main",
+		Updates: []helm_templater.HelmUpdate{
+			{
+				ValuesFile: "path/to/values.yaml",
+				ImagePath:  "image.repository",
+				Image:      "somerandom.tld/org/name",
+				TagPath:    "image.tag",
+				Tag:        "latest",
+			},
+		},
 	})
 	if err != nil {
 		t.Fatalf("Failed updating values.yaml: %s", err)
