@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/golang:1.17 as build-env
+FROM public.ecr.aws/docker/library/golang:1.18 as build-env
 
 WORKDIR /go/src/app
 
