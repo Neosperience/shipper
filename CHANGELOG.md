@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2022-04-27
+
 ### Added
 
 - Support for Gitea as git provider (`--repo-kind gitea`)
@@ -45,7 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Helm as a templater
 - Support for Kustomize as a templater
 
-[unreleased]: https://github.com/neosperience/shipper/compare/0.3.0...HEAD
+[unreleased]: https://github.com/neosperience/shipper/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/neosperience/shipper/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/neosperience/shipper/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/neosperience/shipper/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/neosperience/shipper/releases/tag/0.1.0
