@@ -24,7 +24,7 @@ type HelmProviderOptions struct {
 
 func UpdateHelmChart(repository targets.Repository, options HelmProviderOptions) (targets.FileList, error) {
 	original := make(map[string][]byte)
-	files := make(map[string]map[string]interface{})
+	files := make(map[string]map[string]any)
 	for _, update := range options.Updates {
 		if _, ok := files[update.ValuesFile]; !ok {
 			file, err := repository.Get(update.ValuesFile, options.Ref)
@@ -33,7 +33,7 @@ func UpdateHelmChart(repository targets.Repository, options HelmProviderOptions)
 			}
 
 			original[update.ValuesFile] = file
-			files[update.ValuesFile] = make(map[string]interface{})
+			files[update.ValuesFile] = make(map[string]any)
 			if err := yaml.Unmarshal(file, files[update.ValuesFile]); err != nil {
 				return nil, fmt.Errorf("could not parse YAML file %s: %w", update.ValuesFile, err)
 			}

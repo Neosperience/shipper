@@ -22,7 +22,7 @@ type KustomizeProviderOptions struct {
 
 func UpdateKustomization(repository targets.Repository, options KustomizeProviderOptions) (targets.FileList, error) {
 	original := make(map[string][]byte)
-	files := make(map[string]map[string]interface{})
+	files := make(map[string]map[string]any)
 	for _, update := range options.Updates {
 		if _, ok := files[update.KustomizationFile]; !ok {
 			file, err := repository.Get(update.KustomizationFile, options.Ref)
@@ -31,7 +31,7 @@ func UpdateKustomization(repository targets.Repository, options KustomizeProvide
 			}
 
 			original[update.KustomizationFile] = file
-			files[update.KustomizationFile] = make(map[string]interface{})
+			files[update.KustomizationFile] = make(map[string]any)
 			if err := yaml.Unmarshal(file, files[update.KustomizationFile]); err != nil {
 				return nil, fmt.Errorf("could not parse YAML file %s: %w", update.KustomizationFile, err)
 			}
@@ -40,11 +40,11 @@ func UpdateKustomization(repository targets.Repository, options KustomizeProvide
 		values := files[update.KustomizationFile]
 		images, ok := values["images"]
 		if !ok {
-			images = []interface{}{}
+			images = []any{}
 		}
 
 		// Make sure existing value is an array
-		imageList, ok := images.([]interface{})
+		imageList, ok := images.([]any)
 		if !ok {
 			return nil, fmt.Errorf("kustomization file .images field is not an array")
 		}
@@ -52,7 +52,7 @@ func UpdateKustomization(repository targets.Repository, options KustomizeProvide
 		// Check for existing entries
 		found := false
 		for index := range imageList {
-			current, ok := imageList[index].(map[string]interface{})
+			current, ok := imageList[index].(map[string]any)
 			if !ok {
 				return nil, fmt.Errorf("found invalid entry in image list")
 			}
@@ -68,7 +68,7 @@ func UpdateKustomization(repository targets.Repository, options KustomizeProvide
 			}
 		}
 		if !found {
-			newEntry := map[string]interface{}{
+			newEntry := map[string]any{
 				"name": update.Image,
 			}
 			if update.NewImage != "" {

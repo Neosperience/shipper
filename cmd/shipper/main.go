@@ -199,14 +199,14 @@ func main() {
 				Name:     "container-image",
 				Aliases:  []string{"ci"},
 				Usage:    "Container image",
-				EnvVars:  []string{"SHIPPER_CONTAINER_IMAGE"},
+				EnvVars:  []string{"SHIPPER_CONTAINER_IMAGE", "SHIPPER_CONTAINER_IMAGES"},
 				Required: true,
 			},
 			&cli.StringSliceFlag{
 				Name:     "container-tag",
 				Aliases:  []string{"ct"},
 				Usage:    "Container tag",
-				EnvVars:  []string{"SHIPPER_CONTAINER_TAG"},
+				EnvVars:  []string{"SHIPPER_CONTAINER_TAG", "SHIPPER_CONTAINER_TAGS"},
 				Required: true,
 			},
 			&cli.BoolFlag{
@@ -220,20 +220,20 @@ func main() {
 				Name:    "helm-values-file",
 				Aliases: []string{"hpath"},
 				Usage:   "[helm] Path to values.yaml file",
-				EnvVars: []string{"SHIPPER_HELM_VALUES_FILE"},
+				EnvVars: []string{"SHIPPER_HELM_VALUES_FILE", "SHIPPER_HELM_VALUES_FILES"},
 			},
 			&cli.StringSliceFlag{
 				Name:    "helm-image-path",
 				Aliases: []string{"himg"},
 				Usage:   "[helm] Container image path",
-				EnvVars: []string{"SHIPPER_HELM_IMAGE_PATH"},
+				EnvVars: []string{"SHIPPER_HELM_IMAGE_PATH", "SHIPPER_HELM_IMAGE_PATHS"},
 				Value:   cli.NewStringSlice("image.repository"),
 			},
 			&cli.StringSliceFlag{
 				Name:    "helm-tag-path",
 				Aliases: []string{"htag"},
 				Usage:   "[helm] Container tag path",
-				EnvVars: []string{"SHIPPER_HELM_TAG_PATH"},
+				EnvVars: []string{"SHIPPER_HELM_TAG_PATH", "SHIPPER_HELM_TAG_PATHS"},
 				Value:   cli.NewStringSlice("image.tag"),
 			},
 			// Kustomize options
@@ -241,7 +241,7 @@ func main() {
 				Name:    "kustomize-file",
 				Aliases: []string{"kfile"},
 				Usage:   "[kustomize] Path to kustomization.yaml file",
-				EnvVars: []string{"SHIPPER_KUSTOMIZE_FILE"},
+				EnvVars: []string{"SHIPPER_KUSTOMIZE_FILE", "SHIPPER_KUSTOMIZE_FILES"},
 			},
 			// Gitlab options
 			&cli.StringFlag{
@@ -323,14 +323,14 @@ func main() {
 	check(app.Run(os.Args), "Fatal error")
 }
 
-func check(err error, format string, args ...interface{}) {
+func check(err error, format string, args ...any) {
 	if err != nil {
 		args = append(args, err.Error())
 		log.Fatalf(format+": %s", args...)
 	}
 }
 
-func assert(cond bool, format string, args ...interface{}) {
+func assert(cond bool, format string, args ...any) {
 	if !cond {
 		log.Fatalf(format, args...)
 	}

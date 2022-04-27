@@ -81,7 +81,7 @@ func TestCommit(t *testing.T) {
 		}
 
 		_ = jsoniter.ConfigFastest.NewEncoder(rw).Encode(struct {
-			Commit interface{} `json:"commit"`
+			Commit any `json:"commit"`
 		}{
 			Commit: struct {
 				HTMLURL string `json:"html_url"`
