@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Support for Gitea as git provider (`--repo-kind gitea`)
+- Added support for updating multiple images at once, either specifying `--container-image`, `--container-tag` (and other related tags) multiple times, or by using the environmental variables `CONTAINER_IMAGES` and `CONTAINER_TAGS` with comma-separated values. Multiple files can also be changed with one single run (resulting in a single commit).
 
 ### Changed
 
