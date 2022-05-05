@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Support for JSON files
+- Support for Azure DevOps Services Git repositories as git provider (`--repo-kind azure`)
 
 ### Fixed
 

@@ -120,7 +120,10 @@ When using JSON, the `--container-image` argument will be used as the key to upd
 
 ### Azure DevOps
 
+- Only Git repositories are supported, not Team Foundation (TFVC).
 - When creating a [personal access token](https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate) for shipper, only the "Code (Read & write)" permission is needed.
+- The author string MUST be in the `John Doe <john.doe@example.com>` format or the commit will ignore it and use the default (i.e. the credentials' owner).
+- You will need both a Project ID (in `org/project` format) and a Repository ID, if you don't know what your Repository ID is, it's probably the Project ID (without the organization). E.g. If your Project ID is `my-org/my-project` and you have only one repository, your Repository ID is `my-project`.
 
 ## Contributing
 

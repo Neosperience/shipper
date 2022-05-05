@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/neosperience/shipper/targets"
+	azure_target "github.com/neosperience/shipper/targets/azure"
 	bitbucket_target "github.com/neosperience/shipper/targets/bitbucket"
 	gitea_target "github.com/neosperience/shipper/targets/gitea"
 	github_target "github.com/neosperience/shipper/targets/github"
@@ -73,13 +74,24 @@ func app(c *cli.Context) error {
 
 		repository = gitea_target.NewAPIClient(uri, project, apikey)
 	case "bitbucket-cloud":
-		creds := c.String("bitbucket-key")
-		assert(creds != "", "Bitbucket cloud credentials must be specified when using Bitbucket cloud")
+		credentials := c.String("bitbucket-key")
+		assert(credentials != "", "Bitbucket cloud credentials must be specified when using Bitbucket cloud")
 
 		project := c.String("bitbucket-project")
 		assert(project != "", "Bitbucket project path must be specified when using Bitbucket cloud")
 
-		repository = bitbucket_target.NewCloudAPIClient(project, creds)
+		repository = bitbucket_target.NewCloudAPIClient(project, credentials)
+	case "azure":
+		credentials := c.String("azure-key")
+		assert(credentials != "", "Azure credentials must be specified when using Azure")
+
+		projectID := c.String("azure-project-id")
+		assert(projectID != "", "Azure DevOps Project ID must be specified when using Azure")
+
+		repositoryID := c.String("azure-repository-id")
+		assert(repositoryID != "", "Azure DevOps repository ID must be specified when using Azure")
+
+		repository = azure_target.NewAPIClient(projectID, repositoryID, credentials)
 	default:
 		return fmt.Errorf("repository option not supported: %s", target)
 	}
@@ -192,7 +204,7 @@ func main() {
 				Name:     "repo-kind",
 				Aliases:  []string{"t"},
 				Value:    "gitlab",
-				Usage:    `Repository type (available: "gitlab", "github", "gitea", "bitbucket-cloud")`,
+				Usage:    `Repository type (available: "gitlab", "github", "gitea", "bitbucket-cloud", "azure")`,
 				EnvVars:  []string{"SHIPPER_REPO_KIND"},
 				Required: true,
 			},
@@ -343,6 +355,25 @@ func main() {
 				Aliases: []string{"bb-pid"},
 				Usage:   "[bitbucket-cloud] Project path in \"org/project\" format",
 				EnvVars: []string{"SHIPPER_GITLAB_PROJECT"},
+			},
+			// Azure DevOps options
+			&cli.StringFlag{
+				Name:    "azure-project-id",
+				Aliases: []string{"az-pid"},
+				Usage:   "[azure-devops] Organization and Project ID, in \"org/project\" format",
+				EnvVars: []string{"SHIPPER_AZURE_PROJECT_ID"},
+			},
+			&cli.StringFlag{
+				Name:    "azure-repository-id",
+				Aliases: []string{"az-rid"},
+				Usage:   "[azure-devops] Repository ID (if unsure, use the project ID)",
+				EnvVars: []string{"SHIPPER_AZURE_REPOSITORY_ID"},
+			},
+			&cli.StringFlag{
+				Name:    "azure-key",
+				Aliases: []string{"az-key"},
+				Usage:   "[azure-devops] Username/application token pair in \"username:token\" format",
+				EnvVars: []string{"SHIPPER_AZURE_KEY"},
 			},
 		},
 		Action: app,
