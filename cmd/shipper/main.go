@@ -13,6 +13,7 @@ import (
 	github_target "github.com/neosperience/shipper/targets/github"
 	gitlab_target "github.com/neosperience/shipper/targets/gitlab"
 	helm_templater "github.com/neosperience/shipper/templater/helm"
+	json_templater "github.com/neosperience/shipper/templater/json"
 	kustomize_templater "github.com/neosperience/shipper/templater/kustomize"
 	"github.com/urfave/cli/v2"
 )
@@ -141,6 +142,27 @@ func app(c *cli.Context) error {
 			return err
 		}
 		_ = payload.Files.Add(newFiles)
+	case "json":
+		jsonFiles := c.StringSlice("json-file")
+		assert(jsonFiles != nil && len(jsonFiles) > 0, "At least one JSON file path must be specified when using JSON")
+
+		updates := make([]json_templater.FileUpdate, len(images))
+		for index := 0; index < len(images); index += 1 {
+			updates[index] = json_templater.FileUpdate{
+				File: oneOrMany(jsonFiles, index),
+				Path: oneOrMany(images, index),
+				Tag:  oneOrMany(tags, index),
+			}
+		}
+
+		newFiles, err := json_templater.UpdateJSONFile(repository, json_templater.JSONProviderOptions{
+			Ref:     branch,
+			Updates: updates,
+		})
+		if err != nil {
+			return err
+		}
+		_ = payload.Files.Add(newFiles)
 	default:
 		return fmt.Errorf("templater option not supported: %s", templater)
 	}
@@ -162,7 +184,7 @@ func main() {
 			&cli.StringFlag{
 				Name:     "templater",
 				Aliases:  []string{"p"},
-				Usage:    "Template system (available: \"helm\", \"kustomize\")",
+				Usage:    `Template system (available: "helm", "kustomize", "json")`,
 				EnvVars:  []string{"SHIPPER_PROVIDER"},
 				Required: true,
 			},
@@ -170,7 +192,7 @@ func main() {
 				Name:     "repo-kind",
 				Aliases:  []string{"t"},
 				Value:    "gitlab",
-				Usage:    "Repository type (available: \"gitlab\", \"github\", \"gitea\", \"bitbucket-cloud\")",
+				Usage:    `Repository type (available: "gitlab", "github", "gitea", "bitbucket-cloud")`,
 				EnvVars:  []string{"SHIPPER_REPO_KIND"},
 				Required: true,
 			},
@@ -237,11 +259,18 @@ func main() {
 				Value:   cli.NewStringSlice("image.tag"),
 			},
 			// Kustomize options
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:    "kustomize-file",
 				Aliases: []string{"kfile"},
 				Usage:   "[kustomize] Path to kustomization.yaml file",
 				EnvVars: []string{"SHIPPER_KUSTOMIZE_FILE", "SHIPPER_KUSTOMIZE_FILES"},
+			},
+			// JSON options
+			&cli.StringSliceFlag{
+				Name:    "json-file",
+				Aliases: []string{"jfile"},
+				Usage:   "[json] Path to JSON file",
+				EnvVars: []string{"SHIPPER_JSON_FILE", "SHIPPER_JSON_FILES"},
 			},
 			// Gitlab options
 			&cli.StringFlag{
