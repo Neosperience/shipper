@@ -74,6 +74,32 @@ You can mix & match which to specify once and which to specify many times, but e
 - ❌ 3 instances of `--helm-image-path` but 2 instances of `--helm-values-file`
 - ❌ non-equal amount of `--container-image`, `--container-tag`, `--helm-image-path`, `--helm-tag-path`
 
+## Available templaters
+
+### Helm
+
+The Helm templater is meant to be used on Helm values.yaml files. For each image to update, you must specify a value for each of the following:
+
+ - `--helm-values-file` / `SHIPPER_HELM_VALUES_FILES`: Path to the Helm values.yaml file to modify
+ - `--helm-image-path` / `SHIPPER_HELM_IMAGE_PATHS`: YAML field in the Helm values.yaml file to modify with the specified image repository, using dot notation for nested fields (eg. `image.repository`)
+ - `--helm-tag-path` / `SHIPPER_HELM_TAG_PATHS`: YAML field in the Helm values.yaml file to modify with the specified image tag, using dot notation for nested fields (eg. `image.tag`)
+
+### Kustomize
+
+The Kustomize templater is meant to be used on kustomization.yaml files using the `images` list format like in [this example](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/image.md).
+
+To use it, you must specify the following, either once or for each image/tag pair:
+
+ - `--kustomize-file` / `SHIPPER_KUSTOMIZE_FILES`: Path to the kustomization.yaml file to modify
+
+### JSON
+
+The JSON templater is meant for flat JSON files such as CDK context files (`cdk.json`).
+
+When using JSON, the `--image` argument will be used as the key to update in the JSON file, while the `--tag` argument will be used as the value. You will also need to specify the following value, either once or for each image/tag pair:
+
+ - `--json-file` / `SHIPPER_JSON_FILES`: Path to the JSON file to modify
+
 ## Provider notes
 
 ### GitLab
@@ -85,7 +111,6 @@ You can mix & match which to specify once and which to specify many times, but e
 - When creating a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) for shipper, only the permissions `repo` is needed.
 - The author string MUST be in the `John Doe <john.doe@example.com>` format or the commit will fail.
 - The GitHub Cloud API endpoint is `https://api.github.com`, however GitHub Enterprise Server will have something more akin to `https://HOSTNAME/api/v3`
-
 
 ### Bitbucket cloud
 
