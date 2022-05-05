@@ -316,9 +316,8 @@ func main() {
 			&cli.StringFlag{
 				Name:    "gitea-endpoint",
 				Aliases: []string{"ge-uri"},
-				Usage:   "[gitea] GitHub API endpoint (include \"/api/v1\")",
+				Usage:   "[gitea] Gitea API endpoint (include \"/api/v1\")",
 				EnvVars: []string{"SHIPPER_GITEA_ENDPOINT"},
-				Value:   "https://api.github.com",
 			},
 			&cli.StringFlag{
 				Name:    "gitea-key",
