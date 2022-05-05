@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Support for JSON files
+
+### Fixed
+
+- `--gitea-endpoint` used to have a wrong default. Now it has the no default (as there is no central Gitea server)
+
 ## [0.4.0] - 2022-04-27
 
 ### Added
