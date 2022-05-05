@@ -96,7 +96,7 @@ To use it, you must specify the following, either once or for each image/tag pai
 
 The JSON templater is meant for flat JSON files such as CDK context files (`cdk.json`).
 
-When using JSON, the `--image` argument will be used as the key to update in the JSON file, while the `--tag` argument will be used as the value. You will also need to specify the following value, either once or for each image/tag pair:
+When using JSON, the `--container-image` argument will be used as the key to update in the JSON file, while the `--container-tag` argument will be used as the value. You will also need to specify the following value, either once or for each image/tag pair:
 
  - `--json-file` / `SHIPPER_JSON_FILES`: Path to the JSON file to modify
 
@@ -117,6 +117,10 @@ When using JSON, the `--image` argument will be used as the key to update in the
 - When creating an [app password](https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/) for shipper, only the permissions `repository:read` and `repository:write` are needed.
 - The author string MUST be in the `John Doe <john.doe@example.com>` format or the commit will fail.
 - Bitbucket cloud integration only works with Bitbucket cloud, Bitbucket server has completely different APIs.
+
+### Azure DevOps
+
+- When creating a [personal access token](https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate) for shipper, only the "Code (Read & write)" permission is needed.
 
 ## Contributing
 
