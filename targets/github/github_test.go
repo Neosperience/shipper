@@ -12,22 +12,17 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/neosperience/shipper/targets"
+	"github.com/neosperience/shipper/test"
 )
-
-func assertExpected(t *testing.T, val string, expected string, errmsg string) {
-	if val != expected {
-		t.Fatalf("%s [expected=\"%s\" | got=\"%s\"]", errmsg, expected, val)
-	}
-}
 
 func TestCommit(t *testing.T) {
 	testUser := "test-user"
 	testKey := "test-key"
 	commit := targets.NewPayload("test-branch", "test-author <author@example.com>", "Hello")
-	commit.Files.Add(map[string][]byte{
+	test.MustSucceed(t, commit.Files.Add(map[string][]byte{
 		"textfile.txt":   []byte("test file"),
 		"binaryfile.jpg": {0xff, 0xd8, 0xff, 0xe0},
-	})
+	}), "Failed adding test files")
 
 	hashes := map[string]string{
 		"textfile.txt": "testsha",
@@ -40,8 +35,8 @@ func TestCommit(t *testing.T) {
 		if !ok {
 			t.Fatal("Invalid or empty HTTP Basic auth header received")
 		}
-		assertExpected(t, user, testUser, "Basic auth user doesn't match expected value")
-		assertExpected(t, key, testKey, "Basic auth password doesn't match expected value")
+		test.AssertExpected(t, user, testUser, "Basic auth user doesn't match expected value")
+		test.AssertExpected(t, key, testKey, "Basic auth password doesn't match expected value")
 
 		parts := strings.Split(req.URL.Path, "/")
 		file := parts[len(parts)-1]
@@ -54,33 +49,25 @@ func TestCommit(t *testing.T) {
 				return
 			}
 
-			if err := jsoniter.ConfigFastest.NewEncoder(rw).Encode(struct {
+			test.MustSucceed(t, jsoniter.ConfigFastest.NewEncoder(rw).Encode(struct {
 				SHA string `json:"sha"`
 			}{
 				SHA: sha,
-			}); err != nil {
-				t.Fatalf("Failed sending SHA info: %s", err.Error())
-			}
+			}), "Failed sending SHA info")
 			return
 		}
 
 		// Must be put PUT-ting
 		var payload CommitData
-		err := jsoniter.ConfigFastest.NewDecoder(req.Body).Decode(&payload)
-		if err != nil {
-			t.Fatalf("Failed decoding request payload: %s", err.Error())
-		}
+		test.MustSucceed(t, jsoniter.ConfigFastest.NewDecoder(req.Body).Decode(&payload), "Failed decoding payload")
 
 		byt, err := base64.StdEncoding.DecodeString(payload.Content)
-		if err != nil {
-			t.Fatalf("Failed decoding base64-encoded file content: %s", err.Error())
-		}
-
+		test.MustSucceed(t, err, "Failed decoding base64-encoded content")
 		if !bytes.Equal(byt, commit.Files[file]) {
 			t.Fatal("Decoded file content doesn't match expected")
 		}
 
-		_ = jsoniter.ConfigFastest.NewEncoder(rw).Encode(struct {
+		test.MustSucceed(t, jsoniter.ConfigFastest.NewEncoder(rw).Encode(struct {
 			Commit any `json:"commit"`
 		}{
 			Commit: struct {
@@ -88,15 +75,13 @@ func TestCommit(t *testing.T) {
 			}{
 				HTMLURL: "https://github.com/test-user/test-repo/commit/testsha",
 			},
-		})
+		}), "Failed sending commit info")
 	}))
 	defer server.Close()
 	target := NewAPIClient(server.URL, "test-project", fmt.Sprintf("%s:%s", testUser, testKey))
 	target.client = server.Client()
 
-	if err := target.Commit(commit); err != nil {
-		t.Fatal(err.Error())
-	}
+	test.MustSucceed(t, target.Commit(commit), "Failed committing files")
 }
 
 func TestGet(t *testing.T) {
@@ -111,19 +96,18 @@ func TestGet(t *testing.T) {
 		if !ok {
 			t.Fatal("Invalid or empty HTTP Basic auth header received")
 		}
-		assertExpected(t, user, testUser, "Basic auth user doesn't match expected value")
-		assertExpected(t, key, testKey, "Basic auth password doesn't match expected value")
+		test.AssertExpected(t, user, testUser, "Basic auth user doesn't match expected value")
+		test.AssertExpected(t, key, testKey, "Basic auth password doesn't match expected value")
 
-		rw.Write(testData)
+		_, err := rw.Write(testData)
+		test.MustSucceed(t, err, "Failed writing test data")
 	}))
 	defer server.Close()
 	target := NewAPIClient(server.URL, "test-project", fmt.Sprintf("%s:%s", testUser, testKey))
 	target.client = server.Client()
 
 	byt, err := target.Get(testKey, "main")
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	test.MustSucceed(t, err, "Failed getting file")
 	if !bytes.Equal(byt, testData) {
 		t.Fatal("Expected file content is different from retrieved")
 	}
@@ -136,9 +120,9 @@ func TestFaultyServer(t *testing.T) {
 	}))
 	defer server.Close()
 	payload := targets.NewPayload("test-branch", "test-author <author@example.com>", "Hello")
-	payload.Files.Add(map[string][]byte{
+	test.MustSucceed(t, payload.Files.Add(map[string][]byte{
 		"textfile.txt": []byte("test file"),
-	})
+	}), "Failed adding test file")
 
 	// Test with erroring server
 	target := NewAPIClient(server.URL, "test-project", "unused")

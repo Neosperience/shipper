@@ -3,6 +3,7 @@ package patch
 import (
 	"testing"
 
+	"github.com/neosperience/shipper/test"
 	"gopkg.in/yaml.v3"
 )
 
@@ -65,9 +66,7 @@ func TestSetPathEmpty(t *testing.T) {
 
 	// Call SetPath on an existing tree
 	err := SetPath(asMap, "nested.value", "changed")
-	if err != nil {
-		t.Fatal(err)
-	}
+	test.MustSucceed(t, err, "SetPath should not fail on empty map")
 
 	// Check that value was changed
 	if asMap["nested"].(map[string]any)["value"] != "changed" {
@@ -81,12 +80,13 @@ func TestSetPathInvalid(t *testing.T) {
 
 	// Call SetPath on an existing tree
 	err := SetPath(asMap, "nested.value", "changed")
-	if err == nil {
-		t.Fatal("expected error but everything went fine")
-	} else {
-		if err != ErrInvalidYAMLStructure {
-			t.Fatalf("unexpected error: %s", err.Error())
-		}
+	switch err {
+	case nil:
+		t.Fatal("SetPath should fail when types don't match")
+	case ErrInvalidYAMLStructure:
+		// OK
+	default:
+		t.Fatalf("Unexpected error: %s", err.Error())
 	}
 }
 
@@ -98,6 +98,6 @@ func BenchmarkSetPath(b *testing.B) {
 	}
 
 	for n := 0; n < b.N; n++ {
-		SetPath(asMap, "nested.value", n)
+		test.MustSucceed(b, SetPath(asMap, "nested.value", n), "Failed to set value")
 	}
 }

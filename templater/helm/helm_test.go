@@ -7,6 +7,7 @@ import (
 	"github.com/neosperience/shipper/patch"
 	"github.com/neosperience/shipper/targets"
 	helm_templater "github.com/neosperience/shipper/templater/helm"
+	"github.com/neosperience/shipper/test"
 	"gopkg.in/yaml.v3"
 )
 
@@ -94,14 +95,10 @@ func testUpdateHelmChart(t *testing.T, file string) {
 			},
 		},
 	})
-	if err != nil {
-		t.Fatalf("Failed updating values.yaml: %s", err)
-	}
+	test.MustSucceed(t, err, "Failed updating values.yaml")
 
 	val, ok := commitData["path/to/values.yaml"]
-	if !ok {
-		t.Fatal("Expected values.yaml to be modified but wasn't found")
-	}
+	test.AssertExpected(t, ok, true, "No values.yaml file found in commit")
 
 	// Re-parse YAML
 	var parsed struct {
@@ -111,15 +108,9 @@ func testUpdateHelmChart(t *testing.T, file string) {
 		} `yaml:"image"`
 	}
 	err = yaml.Unmarshal(val, &parsed)
-	if err != nil {
-		t.Fatalf("Failed to parse committed YAML: %s", err.Error())
-	}
-	if parsed.Image.Repository != newImage {
-		t.Fatal("Image repository was not set to the new expected value")
-	}
-	if parsed.Image.Tag != newTag {
-		t.Fatal("Image tag was not set to the new expected value")
-	}
+	test.MustSucceed(t, err, "Failed parsing values.yaml")
+	test.AssertExpected(t, parsed.Image.Repository, newImage, "Image repository was not set to the new expected value")
+	test.AssertExpected(t, parsed.Image.Tag, newTag, "Image tag was not set to the new expected value")
 }
 
 func TestUpdateHelmChartExisting(t *testing.T) {
@@ -150,12 +141,13 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 			},
 		},
 	})
-	if err == nil {
+	switch {
+	case err == nil:
 		t.Fatal("Updating repo succeeded but the original file did not exist!")
-	} else {
-		if !errors.Is(err, targets.ErrFileNotFound) {
-			t.Fatalf("Unexpected error: %s", err.Error())
-		}
+	case errors.Is(err, targets.ErrFileNotFound):
+		// Expected
+	default:
+		t.Fatalf("Unexpected error: %s", err.Error())
 	}
 
 	// Test with non-YAML file
@@ -188,12 +180,13 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 			},
 		},
 	})
-	if err == nil {
+	switch {
+	case err == nil:
 		t.Fatal("Updating repo succeeded but the original file has an invalid format!")
-	} else {
-		if !errors.Is(err, patch.ErrInvalidYAMLStructure) {
-			t.Fatalf("Unexpected error: %s", err.Error())
-		}
+	case errors.Is(err, patch.ErrInvalidYAMLStructure):
+		// Expected
+	default:
+		t.Fatalf("Unexpected error: %s", err.Error())
 	}
 
 	// Test with invalid tag path
@@ -209,12 +202,14 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 			},
 		},
 	})
-	if err == nil {
+
+	switch {
+	case err == nil:
 		t.Fatal("Updating repo succeeded but the original file has an invalid format!")
-	} else {
-		if !errors.Is(err, patch.ErrInvalidYAMLStructure) {
-			t.Fatalf("Unexpected error: %s", err.Error())
-		}
+	case errors.Is(err, patch.ErrInvalidYAMLStructure):
+		// Expected
+	default:
+		t.Fatalf("Unexpected error: %s", err.Error())
 	}
 }
 
@@ -240,10 +235,7 @@ func TestUpdateHelmChartNoChanges(t *testing.T) {
 			},
 		},
 	})
-	if err != nil {
-		t.Fatalf("Failed updating values.yaml: %s", err)
-	}
-
+	test.MustSucceed(t, err, "Failed updating values.yaml")
 	if len(commitData) > 0 {
 		t.Fatalf("Found %d changes but commit was expected to be empty", len(commitData))
 	}
@@ -288,9 +280,7 @@ func TestUpdateMultipleImages(t *testing.T) {
 		Ref:     "main",
 		Updates: updates,
 	})
-	if err != nil {
-		t.Fatalf("Failed updating values.yaml: %s", err)
-	}
+	test.MustSucceed(t, err, "Failed updating values.yaml")
 
 	valuesFile, ok := commitData["path/to/values.yaml"]
 	if !ok {
@@ -307,36 +297,17 @@ func TestUpdateMultipleImages(t *testing.T) {
 			Tag        string `yaml:"tag"`
 		} `yaml:"image2"`
 	}
-	err = yaml.Unmarshal(valuesFile, &parsedValues)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal values.yaml: %s", err)
-	}
-
-	if parsedValues.Image.Repository != updates[0].Image {
-		t.Fatalf("Expected first image repository to be %s but got %s", updates[0].Image, parsedValues.Image.Repository)
-	}
-	if parsedValues.Image.Tag != updates[0].Tag {
-		t.Fatalf("Expected first image tag to be %s but got %s", updates[0].Tag, parsedValues.Image.Tag)
-	}
-	if parsedValues.Image2.Repository != updates[1].Image {
-		t.Fatalf("Expected second image repository to be %s but got %s", updates[1].Image, parsedValues.Image2.Repository)
-	}
-	if parsedValues.Image.Tag != updates[0].Tag {
-		t.Fatalf("Expected second image tag to be %s but got %s", updates[1].Tag, parsedValues.Image2.Tag)
-	}
+	test.MustSucceed(t, yaml.Unmarshal(valuesFile, &parsedValues), "Failed parsing values.yaml")
+	test.AssertExpected(t, parsedValues.Image.Repository, updates[0].Image, "values.yaml/image.repository is not as expected")
+	test.AssertExpected(t, parsedValues.Image.Tag, updates[0].Tag, "values.yaml/image.tag is not as expected")
+	test.AssertExpected(t, parsedValues.Image2.Repository, updates[1].Image, "values.yaml/image2.repository is not as expected")
+	test.AssertExpected(t, parsedValues.Image2.Tag, updates[1].Tag, "values.yaml/image2.tag is not as expected")
 
 	otherValuesFile, ok := commitData["path/to/other-values.yaml"]
 	if !ok {
 		t.Fatal("Failed to find other-values.yaml in commit data")
 	}
-	err = yaml.Unmarshal(otherValuesFile, &parsedValues)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal values.yaml: %s", err)
-	}
-	if parsedValues.Image.Repository != updates[2].Image {
-		t.Fatalf("Expected third image repository to be %s but got %s", updates[2].Image, parsedValues.Image.Repository)
-	}
-	if parsedValues.Image.Tag != updates[2].Tag {
-		t.Fatalf("Expected third image tag to be %s but got %s", updates[2].Tag, parsedValues.Image.Tag)
-	}
+	test.MustSucceed(t, yaml.Unmarshal(otherValuesFile, &parsedValues), "Failed parsing other-values.yaml")
+	test.AssertExpected(t, parsedValues.Image.Repository, updates[2].Image, "other-values.yaml/image.repository is not as expected")
+	test.AssertExpected(t, parsedValues.Image.Tag, updates[2].Tag, "other-values.yaml/image.tag is not as expected")
 }

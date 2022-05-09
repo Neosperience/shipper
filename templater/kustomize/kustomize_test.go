@@ -6,6 +6,7 @@ import (
 
 	"github.com/neosperience/shipper/targets"
 	kustomize_templater "github.com/neosperience/shipper/templater/kustomize"
+	"github.com/neosperience/shipper/test"
 	"gopkg.in/yaml.v3"
 )
 
@@ -85,9 +86,7 @@ func testUpdateKustomizationCommon(t *testing.T, kustomizeFile string) {
 			},
 		},
 	})
-	if err != nil {
-		t.Fatalf("Failed updating kustomization.yaml: %s", err.Error())
-	}
+	test.MustSucceed(t, err, "Failed updating kustomization.yaml")
 
 	val, ok := commitData["path/to/kustomization.yaml"]
 	if !ok {
@@ -101,24 +100,13 @@ func testUpdateKustomizationCommon(t *testing.T, kustomizeFile string) {
 			NewImage string `yaml:"newImage"`
 		} `yaml:"images"`
 	}
-	err = yaml.Unmarshal(val, &partial)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal committed file: %s", err.Error())
-	}
-
+	test.MustSucceed(t, yaml.Unmarshal(val, &partial), "Failed parsing kustomization.yaml")
 	if len(partial.Image) < 1 {
 		t.Fatal("No image fields were found")
 	}
-
-	if partial.Image[0].Name != newImage {
-		t.Fatal("Image name is different than expected")
-	}
-	if partial.Image[0].NewTag != newTag {
-		t.Fatal("Image tag is different than expected")
-	}
-	if partial.Image[0].NewImage != newImagePath {
-		t.Fatal("Image tag is different than expected")
-	}
+	test.AssertExpected(t, partial.Image[0].Name, newImage, "Image name is different than expected")
+	test.AssertExpected(t, partial.Image[0].NewTag, newTag, "Image tag is different than expected")
+	test.AssertExpected(t, partial.Image[0].NewImage, newImagePath, "Image newImage is different than expected")
 }
 
 func TestUpdateKustomizationNoImages(t *testing.T) {
@@ -151,12 +139,13 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 			},
 		},
 	})
-	if err == nil {
+	switch {
+	case err == nil:
 		t.Fatal("Updating repo succeeded but the original file did not exist!")
-	} else {
-		if !errors.Is(err, targets.ErrFileNotFound) {
-			t.Fatalf("Unexpected error: %s", err.Error())
-		}
+	case errors.Is(err, targets.ErrFileNotFound):
+		// Expected
+	default:
+		t.Fatalf("Unexpected error: %s", err.Error())
 	}
 
 	// Test with non-YAML file
@@ -227,9 +216,7 @@ func TestMultipleUpdatesInOneFile(t *testing.T) {
 		Ref:     "dummy",
 		Updates: updates,
 	})
-	if err != nil {
-		t.Fatalf("Failed updating kustomization.yaml: %s", err.Error())
-	}
+	test.MustSucceed(t, err, "Failed updating kustomization.yaml")
 
 	val, ok := commitData["path/to/kustomization.yaml"]
 	if !ok {
@@ -242,25 +229,10 @@ func TestMultipleUpdatesInOneFile(t *testing.T) {
 			NewTag string `yaml:"newTag"`
 		} `yaml:"images"`
 	}
-	err = yaml.Unmarshal(val, &partial)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal committed file: %s", err.Error())
-	}
-
-	if len(partial.Image) != 3 {
-		t.Fatalf("Expected 3 images but found %d", len(partial.Image))
-	}
-
-	if partial.Image[0].Name != updates[0].Image {
-		t.Fatal("Updated image name is different than expected")
-	}
-	if partial.Image[0].NewTag != updates[0].NewTag {
-		t.Fatal("Updated image tag is different than expected")
-	}
-	if partial.Image[2].Name != updates[1].Image {
-		t.Fatal("New image name is different than expected")
-	}
-	if partial.Image[2].NewTag != updates[1].NewTag {
-		t.Fatal("New image tag is different than expected")
-	}
+	test.MustSucceed(t, yaml.Unmarshal(val, &partial), "Failed parsing kustomization.yaml")
+	test.AssertExpected(t, len(partial.Image), 3, "Wrong number of images found")
+	test.AssertExpected(t, partial.Image[0].Name, updates[0].Image, "Updated image name is different than expected")
+	test.AssertExpected(t, partial.Image[0].NewTag, updates[0].NewTag, "Updated image tag is different than expected")
+	test.AssertExpected(t, partial.Image[2].Name, updates[1].Image, "New image name is different than expected")
+	test.AssertExpected(t, partial.Image[2].NewTag, updates[1].NewTag, "New image tag is different than expected")
 }

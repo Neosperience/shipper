@@ -18,10 +18,10 @@ func TestCommit(t *testing.T) {
 	testUser := "test-user@org.tld"
 	testKey := "test-key"
 	push := targets.NewPayload("test-branch", "test-author <author@example.com>", "Hello")
-	push.Files.Add(map[string][]byte{
+	test.MustSucceed(t, push.Files.Add(map[string][]byte{
 		"textfile.txt":   []byte("test file"),
 		"binaryfile.jpg": {0xff, 0xd8, 0xff, 0xe0},
-	})
+	}), "Failed adding test files")
 
 	// Setup test HTTP server/client
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -48,9 +48,7 @@ func TestCommit(t *testing.T) {
 		// Decode payload
 		var payload pushData
 		err := jsoniter.ConfigFastest.NewDecoder(req.Body).Decode(&payload)
-		if err != nil {
-			t.Fatal(err)
-		}
+		test.MustSucceed(t, err, "Failed to decode payload")
 		defer req.Body.Close()
 
 		test.AssertExpected(t, len(payload.Commits), 1, "Expected 1 commit")
@@ -81,9 +79,7 @@ func TestCommit(t *testing.T) {
 	target.baseURI = server.URL
 	target.client = server.Client()
 
-	if err := target.Commit(push); err != nil {
-		t.Fatal(err.Error())
-	}
+	test.MustSucceed(t, target.Commit(push), "Failed to commit")
 }
 
 func TestGet(t *testing.T) {
@@ -102,7 +98,8 @@ func TestGet(t *testing.T) {
 		test.AssertExpected(t, user, testUser, "Basic auth user doesn't match expected value")
 		test.AssertExpected(t, key, testKey, "Basic auth password doesn't match expected value")
 
-		rw.Write(testData)
+		_, err := rw.Write(testData)
+		test.MustSucceed(t, err, "Failed to write test data")
 	}))
 	defer server.Close()
 	target := NewAPIClient("test-project", "test-repository", fmt.Sprintf("%s:%s", testUser, testKey))
@@ -110,9 +107,7 @@ func TestGet(t *testing.T) {
 	target.client = server.Client()
 
 	byt, err := target.Get(testPath, "main")
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	test.MustSucceed(t, err, "Failed to get file")
 	if !bytes.Equal(byt, testData) {
 		t.Fatal("Expected file content is different from retrieved")
 	}
