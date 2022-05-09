@@ -6,6 +6,7 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/neosperience/shipper/targets"
+	"github.com/neosperience/shipper/test"
 
 	json_templater "github.com/neosperience/shipper/templater/json"
 )
@@ -37,9 +38,7 @@ func testUpdateJSONFile(t *testing.T, file string) {
 			},
 		},
 	})
-	if err != nil {
-		t.Fatalf("Failed updating cdk.json: %s", err)
-	}
+	test.MustSucceed(t, err, "Failed updating cdk.json")
 
 	val, ok := commitData["path/to/cdk.json"]
 	if !ok {
@@ -50,13 +49,8 @@ func testUpdateJSONFile(t *testing.T, file string) {
 	var parsed struct {
 		Image string `json:"image.env=build"`
 	}
-	err = jsoniter.ConfigDefault.Unmarshal(val, &parsed)
-	if err != nil {
-		t.Fatalf("Failed to parse committed JSON: %s", err.Error())
-	}
-	if parsed.Image != newTag {
-		t.Fatal("Image tag was not set to the new expected value")
-	}
+	test.MustSucceed(t, jsoniter.Unmarshal(val, &parsed), "Failed parsing cdk.json")
+	test.AssertExpected(t, parsed.Image, newTag, "Image tag was not set to the new expected value")
 }
 
 func TestUpdateJSONFileExisting(t *testing.T) {
@@ -83,12 +77,13 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 			},
 		},
 	})
-	if err == nil {
+	switch {
+	case err == nil:
 		t.Fatal("Updating repo succeeded but the original file did not exist!")
-	} else {
-		if !errors.Is(err, targets.ErrFileNotFound) {
-			t.Fatalf("Unexpected error: %s", err.Error())
-		}
+	case errors.Is(err, targets.ErrFileNotFound):
+		// Expected
+	default:
+		t.Fatalf("Unexpected error: %s", err)
 	}
 
 	// Test with non-JSON file
@@ -125,10 +120,7 @@ func TestUpdateJSONNoChanges(t *testing.T) {
 			},
 		},
 	})
-	if err != nil {
-		t.Fatalf("Failed updating cdk.json: %s", err)
-	}
-
+	test.MustSucceed(t, err, "Failed updating cdk.json")
 	if len(commitData) > 0 {
 		t.Fatalf("Found %d changes but commit was expected to be empty", len(commitData))
 	}
@@ -157,9 +149,7 @@ func TestUpdateMultipleImages(t *testing.T) {
 		Ref:     "main",
 		Updates: updates,
 	})
-	if err != nil {
-		t.Fatalf("Failed updating JSON files: %s", err)
-	}
+	test.MustSucceed(t, err, "Failed updating JSON files")
 
 	valuesFile, ok := commitData["path/to/cdk.json"]
 	if !ok {
@@ -169,23 +159,13 @@ func TestUpdateMultipleImages(t *testing.T) {
 	var parsedValues struct {
 		Image string `json:"image"`
 	}
-	err = jsoniter.ConfigFastest.Unmarshal(valuesFile, &parsedValues)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal cdk.json: %s", err)
-	}
-	if parsedValues.Image != updates[0].Tag {
-		t.Fatalf("Expected first image to be tagged %s but got %s", updates[0].Tag, parsedValues.Image)
-	}
+	test.MustSucceed(t, jsoniter.Unmarshal(valuesFile, &parsedValues), "Failed parsing cdk.json")
+	test.AssertExpected(t, parsedValues.Image, updates[0].Tag, "cdk.json/image tag was not set to the new expected value")
 
 	otherValuesFile, ok := commitData["path/to/other-values.json"]
 	if !ok {
 		t.Fatal("Failed to find other-values.json in commit data")
 	}
-	err = jsoniter.ConfigFastest.Unmarshal(otherValuesFile, &parsedValues)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal other-values.json: %s", err)
-	}
-	if parsedValues.Image != updates[1].Tag {
-		t.Fatalf("Expected second image to be tagged %s but got %s", updates[1].Tag, parsedValues.Image)
-	}
+	test.MustSucceed(t, jsoniter.Unmarshal(otherValuesFile, &parsedValues), "Failed parsing other-values.json")
+	test.AssertExpected(t, parsedValues.Image, updates[1].Tag, "other-values.json/image tag was not set to the new expected value")
 }
