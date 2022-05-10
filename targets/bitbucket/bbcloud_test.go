@@ -84,28 +84,24 @@ func TestFaultyServer(t *testing.T) {
 	defer server.Close()
 	payload := targets.NewPayload("test-branch", "test-author <author@example.com>", "Hello")
 
-	// Test with erroring server
+	// Test with faulty server
 	target := NewCloudAPIClient("test-project", "unused")
 	target.client = server.Client()
 	target.baseURI = server.URL
 
-	if _, err := target.Get("test", "main"); err == nil {
-		t.Fatal("Request supposed to error out but Get call exited successfully")
-	}
+	_, err := target.Get("test", "main")
+	test.MustFail(t, err, "Request supposed to error out but Get call exited successfully")
 
-	if err := target.Commit(payload); err == nil {
-		t.Fatal("Request supposed to error out but Commit call exited successfully")
-	}
+	err = target.Commit(payload)
+	test.MustFail(t, err, "Request supposed to error out but Commit call exited successfully")
 
-	// Test with unreacheable target
+	// Test with unreachable target
 	target.baseURI = "http://0.0.0.0"
 	target.client.Timeout = time.Millisecond // Set a low timeout since we don't want this to work anyway
 
-	if _, err := target.Get("test", "main"); err == nil {
-		t.Fatal("Request supposed to error out but Get call exited successfully")
-	}
+	_, err = target.Get("test", "main")
+	test.MustFail(t, err, "Request supposed to error out but Get call exited successfully")
 
-	if err := target.Commit(payload); err == nil {
-		t.Fatal("Request supposed to error out but Commit call exited successfully")
-	}
+	err = target.Commit(payload)
+	test.MustFail(t, err, "Request supposed to error out but Commit call exited successfully")
 }

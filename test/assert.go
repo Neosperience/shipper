@@ -18,3 +18,10 @@ func MustSucceed(t testLogger, err error, errorMessage string) {
 		t.Fatalf("%s [error=\"%v\"]", errorMessage, err)
 	}
 }
+
+// MustFail checks that an error is not nil and fails the test otherwise
+func MustFail(t testLogger, err error, errorMessage string) {
+	if err == nil {
+		t.Fatal(errorMessage)
+	}
+}

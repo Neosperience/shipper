@@ -121,28 +121,49 @@ func TestFaultyServer(t *testing.T) {
 	defer server.Close()
 	payload := targets.NewPayload("test-branch", "test-author <author@example.com>", "Hello")
 
-	// Test with erroring server
+	// Test with faulty server
 	target := NewAPIClient(server.URL, "test-project", "unused")
 	target.client = server.Client()
 
-	if _, err := target.Get("test", "main"); err == nil {
-		t.Fatal("Request supposed to error out but Get call exited successfully")
-	}
+	_, err := target.Get("test", "main")
+	test.MustFail(t, err, "Request supposed to error out but Get call exited successfully")
 
-	if err := target.Commit(payload); err == nil {
-		t.Fatal("Request supposed to error out but Commit call exited successfully")
-	}
+	err = target.Commit(payload)
+	test.MustFail(t, err, "Request supposed to error out but Commit call exited successfully")
 
-	// Test with unreacheable target
+	// Test with unreachable target
 	target = NewAPIClient("http://0.0.0.0", "test-project", "unused")
 	target.client = server.Client()
 	target.client.Timeout = time.Millisecond // Set a low timeout since we don't want this to work anyway
 
-	if _, err := target.Get("test", "main"); err == nil {
-		t.Fatal("Request supposed to error out but Get call exited successfully")
-	}
+	_, err = target.Get("test", "main")
+	test.MustFail(t, err, "Request supposed to error out but Get call exited successfully")
 
-	if err := target.Commit(payload); err == nil {
-		t.Fatal("Request supposed to error out but Commit call exited successfully")
-	}
+	err = target.Commit(payload)
+	test.MustFail(t, err, "Request supposed to error out but Commit call exited successfully")
+}
+
+func TestFaultyCommit(t *testing.T) {
+	// Setup test HTTP server/client
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		// Mock missing ref
+		if req.Method != "POST" {
+			test.MustSucceed(t, jsoniter.ConfigFastest.NewEncoder(rw).Encode(refList{
+				Value: []azureRef{},
+				Count: 0,
+			}), "Failed to encode ref list")
+			return
+		}
+	}))
+	defer server.Close()
+
+	target := NewAPIClient("test-url", "test-project", "test-user@org.tld:test-key")
+	target.baseURI = server.URL
+	target.client = server.Client()
+
+	push := targets.NewPayload("test-branch", "test-author <author@example.com>", "Hello")
+	test.MustSucceed(t, push.Files.Add(map[string][]byte{
+		"textfile.txt": []byte("test file"),
+	}), "Failed adding test files")
+	test.MustFail(t, target.Commit(push), "Commit supposed to fail for missing ref but succeeded")
 }

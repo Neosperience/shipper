@@ -159,9 +159,7 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 			},
 		},
 	})
-	if err == nil {
-		t.Fatal("Updating repo succeeded but the original file is not a YAML file!")
-	}
+	test.MustFail(t, err, "Updating repo succeeded but the original file is not a YAML file!")
 
 	// Test with invalid images path
 	_, err = kustomize_templater.UpdateKustomization(brokenrepo, kustomize_templater.KustomizeProviderOptions{
@@ -174,9 +172,7 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 			},
 		},
 	})
-	if err == nil {
-		t.Fatal("Updating repo succeeded but the original file has an invalid format!")
-	}
+	test.MustFail(t, err, "Updating repo succeeded but the original file has an invalid format!")
 
 	// Test with invalid images array type
 	_, err = kustomize_templater.UpdateKustomization(brokenrepo, kustomize_templater.KustomizeProviderOptions{
@@ -189,9 +185,7 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 			},
 		},
 	})
-	if err == nil {
-		t.Fatal("Updating repo succeeded but the original file has an invalid format!")
-	}
+	test.MustFail(t, err, "Updating repo succeeded but the original file has an invalid format!")
 }
 
 func TestMultipleUpdatesInOneFile(t *testing.T) {

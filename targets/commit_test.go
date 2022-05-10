@@ -2,6 +2,7 @@ package targets_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/neosperience/shipper/targets"
@@ -49,5 +50,26 @@ func TestPayloadAdd(t *testing.T) {
 		// OK
 	default:
 		t.Fatal("expected error when adding duplicate files but got unexpected error")
+	}
+}
+
+func TestPayloadString(t *testing.T) {
+	branch := "test-branch"
+	author := "test-author"
+	fileName := "test-file"
+	commit := targets.NewPayload(branch, author, "Hello")
+	commit.Files.Add(map[string][]byte{
+		fileName: []byte("test file"),
+	})
+	commitString := commit.String()
+	// Check that the commit string contains most of the info
+	if strings.Index(commitString, branch) == -1 {
+		t.Fatal("branch not found in commit string")
+	}
+	if strings.Index(commitString, author) == -1 {
+		t.Fatal("author not found in commit string")
+	}
+	if strings.Index(commitString, fileName) == -1 {
+		t.Fatal("file name not found in commit string")
 	}
 }
