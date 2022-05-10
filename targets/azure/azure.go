@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 	"unicode/utf8"
 
 	jsoniter "github.com/json-iterator/go"
+
+	"github.com/neosperience/shipper/common"
 	"github.com/neosperience/shipper/targets"
 )
 
@@ -38,46 +41,34 @@ func NewAPIClient(projectID string, repositoryID string, credentials string) *Az
 	}
 }
 
+func (azure *AzureRepository) doRequest(method string, requestURI string, body io.Reader, headers http.Header) (*http.Response, error) {
+	// Add authentication headers
+	if headers == nil {
+		headers = make(http.Header)
+	}
+	headers.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(azure.credentials)))
+
+	return common.HTTPRequest(azure.client, method, requestURI, body, headers)
+}
+
 func (azure *AzureRepository) Get(path string, ref string) ([]byte, error) {
 	requestURI := fmt.Sprintf("%s/%s/_apis/git/repositories/%s/items?path=%s&version=%s&api-version=6.0", azure.baseURI, azure.projectID, azure.repositoryID, url.QueryEscape(path), url.QueryEscape(ref))
-	req, err := http.NewRequest("GET", requestURI, nil)
+	res, err := azure.doRequest("GET", requestURI, nil, nil)
 	if err != nil {
-		return nil, fmt.Errorf("error creating request: %w", err)
-	}
-	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(azure.credentials)))
-
-	res, err := azure.client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error performing request: %w", err)
+		return nil, fmt.Errorf("error performing GET /items: %w", err)
 	}
 	defer res.Body.Close()
-
-	if res.StatusCode >= 400 {
-		body, _ := ioutil.ReadAll(res.Body)
-		return nil, fmt.Errorf("request returned error: %s", body)
-	}
 
 	return ioutil.ReadAll(res.Body)
 }
 
 func (azure *AzureRepository) headRef(ref string) (string, error) {
 	requestURI := fmt.Sprintf("%s/%s/_apis/git/repositories/%s/refs?filter=heads/%s&$top=1&api-version=6.0", azure.baseURI, azure.projectID, azure.repositoryID, url.QueryEscape(ref))
-	req, err := http.NewRequest("GET", requestURI, nil)
+	res, err := azure.doRequest("GET", requestURI, nil, nil)
 	if err != nil {
-		return "", fmt.Errorf("error creating request: %w", err)
-	}
-	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(azure.credentials)))
-
-	res, err := azure.client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("error performing request: %w", err)
+		return "", fmt.Errorf("error performing GET /refs: %w", err)
 	}
 	defer res.Body.Close()
-
-	if res.StatusCode >= 400 {
-		body, _ := ioutil.ReadAll(res.Body)
-		return "", fmt.Errorf("request returned error: %s", body)
-	}
 
 	var refs refList
 	err = jsoniter.ConfigFastest.NewDecoder(res.Body).Decode(&refs)
@@ -126,24 +117,13 @@ func (azure *AzureRepository) Commit(payload *targets.CommitPayload) error {
 	}
 
 	requestURI := fmt.Sprintf("%s/%s/_apis/git/repositories/%s/pushes?api-version=6.0", azure.baseURI, azure.projectID, azure.repositoryID)
-	req, err := http.NewRequest("POST", requestURI, b)
+	res, err := azure.doRequest("POST", requestURI, b, http.Header{
+		"Content-Type": []string{"application/json"},
+	})
 	if err != nil {
-		return fmt.Errorf("error creating request: %w", err)
-	}
-
-	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(azure.credentials)))
-	req.Header.Add("Content-Type", "application/json")
-
-	res, err := azure.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("error performing request: %w", err)
+		return fmt.Errorf("error performing POST /pushes: %w", err)
 	}
 	defer res.Body.Close()
-
-	if res.StatusCode >= 400 {
-		body, _ := ioutil.ReadAll(res.Body)
-		return fmt.Errorf("request returned error: %s", body)
-	}
 
 	var response pushResponse
 	err = jsoniter.ConfigFastest.NewDecoder(res.Body).Decode(&response)
