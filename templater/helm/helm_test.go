@@ -163,9 +163,7 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 			},
 		},
 	})
-	if err == nil {
-		t.Fatal("Updating repo succeeded but the original file is not a YAML file!")
-	}
+	test.MustFail(t, err, "Updating repo succeeded but the original file is not a YAML file!")
 
 	// Test with invalid image path
 	_, err = helm_templater.UpdateHelmChart(brokenrepo, helm_templater.HelmProviderOptions{

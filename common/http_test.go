@@ -71,19 +71,13 @@ func TestFaultyServer(t *testing.T) {
 
 	client := server.Client()
 	_, err := HTTPRequest(client, "GET", server.URL, nil, nil)
-	if err == nil {
-		t.Fatal("Request supposed to error out for error response but call exited successfully")
-	}
+	test.MustFail(t, err, "Request supposed to error out for error response but call exited successfully")
 
 	// Try requesting an unreachable server
 	_, err = HTTPRequest(client, "GET", "http://localhost:1/invalid", nil, nil)
-	if err == nil {
-		t.Fatal("Request supposed to error out for unreacheable server but call exited successfully")
-	}
+	test.MustFail(t, err, "Request supposed to error out for unreachable server but call exited successfully")
 
 	// Try requesting an invalid values
 	_, err = HTTPRequest(client, "😐", "invalid@@", nil, nil)
-	if err == nil {
-		t.Fatal("Request supposed to error out for invalid URL but call exited successfully")
-	}
+	test.MustFail(t, err, "Request supposed to error out for invalid method/URI but call exited successfully")
 }

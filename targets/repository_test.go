@@ -22,11 +22,9 @@ func TestInMemoryRepository(t *testing.T) {
 		t.Fatal("retrieved data for test file doesn't match initial file content")
 	}
 
-	// Check for inexistant entry
+	// Check for non-existent entry
 	_, err = repo.Get("__dummyfile", "dummyref")
-	if err == nil {
-		t.Fatal("found nonexistent file")
-	}
+	test.MustFail(t, err, "Expected error when getting non-existent file")
 
 	// Submit new data
 	payload := targets.CommitPayload{

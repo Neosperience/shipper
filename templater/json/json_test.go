@@ -97,9 +97,7 @@ func TestUpdateHelmChartFaultyRepository(t *testing.T) {
 			},
 		},
 	})
-	if err == nil {
-		t.Fatal("Updating repo succeeded but the original file is not a JSON file!")
-	}
+	test.MustFail(t, err, "Updating repo succeeded but the original file was not a valid JSON file!")
 }
 
 func TestUpdateJSONNoChanges(t *testing.T) {

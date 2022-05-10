@@ -128,24 +128,20 @@ func TestFaultyServer(t *testing.T) {
 	target := NewAPIClient(server.URL, "test-project", "unused")
 	target.client = server.Client()
 
-	if _, err := target.Get("test", "main"); err == nil {
-		t.Fatal("Request supposed to error out but Get call exited successfully")
-	}
+	_, err := target.Get("test", "main")
+	test.MustFail(t, err, "Request supposed to error out but Get call exited successfully")
 
-	if err := target.Commit(payload); err == nil {
-		t.Fatal("Request supposed to error out but Commit call exited successfully")
-	}
+	err = target.Commit(payload)
+	test.MustFail(t, err, "Request supposed to error out but Commit call exited successfully")
 
 	// Test with unreacheable target
 	target = NewAPIClient("http://0.0.0.0", "test-project", "unused")
 	target.client = server.Client()
 	target.client.Timeout = time.Millisecond // Set a low timeout since we don't want this to work anyway
 
-	if _, err := target.Get("test", "main"); err == nil {
-		t.Fatal("Request supposed to error out but Get call exited successfully")
-	}
+	_, err = target.Get("test", "main")
+	test.MustFail(t, err, "Request supposed to error out but Get call exited successfully")
 
-	if err := target.Commit(payload); err == nil {
-		t.Fatal("Request supposed to error out but Commit call exited successfully")
-	}
+	err = target.Commit(payload)
+	test.MustFail(t, err, "Request supposed to error out but Commit call exited successfully")
 }
