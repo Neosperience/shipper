@@ -16,15 +16,17 @@ Shipper automates this by leveraging the native Git provider API (e.g. GitLab, G
 
 ### Git Providers
 
-- [GitLab] (both self-managed and gitlab.com)
+- [Azure DevOps]
 - [BitBucket] (only BitBucket cloud ie. bitbucket.org)
-- [GitHub] (both GitHub.com and GitHub Enteprise Server)
 - [Gitea]
+- [GitHub] (both GitHub.com and GitHub Enteprise Server)
+- [GitLab] (both self-managed and gitlab.com)
 
 ### Templaters
 
-- [Helm]
-- [Kustomize]
+- Flat JSON (cdk.json)
+- [Helm] (values.yaml)
+- [Kustomize] (kustomization.yaml)
 
 ## Usage
 
@@ -102,15 +104,12 @@ When using JSON, the `--container-image` argument will be used as the key to upd
 
 ## Provider notes
 
-### GitLab
+### Azure DevOps
 
-- When creating a [project access token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) for shipper, only the permission `api` is needed. (Role depends on your branch permissions, eg. protected branches)
-
-### GitHub
-
-- When creating a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) for shipper, only the permissions `repo` is needed.
-- The author string MUST be in the `John Doe <john.doe@example.com>` format or the commit will fail.
-- The GitHub Cloud API endpoint is `https://api.github.com`, however GitHub Enterprise Server will have something more akin to `https://HOSTNAME/api/v3`
+- Only Git repositories are supported, not Team Foundation (TFVC).
+- When creating a [personal access token](https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate) for shipper, only the "Code (Read & write)" permission is needed.
+- The author string MUST be in the `John Doe <john.doe@example.com>` format or the commit will ignore it and use the default (i.e. the credentials' owner).
+- You will need both a Project ID (in `org/project` format) and a Repository ID, if you don't know what your Repository ID is, it's probably the Project ID (without the organization). E.g. If your Project ID is `my-org/my-project` and you have only one repository, your Repository ID is `my-project`.
 
 ### Bitbucket cloud
 
@@ -118,12 +117,20 @@ When using JSON, the `--container-image` argument will be used as the key to upd
 - The author string MUST be in the `John Doe <john.doe@example.com>` format or the commit will fail.
 - Bitbucket cloud integration only works with Bitbucket cloud, Bitbucket server has completely different APIs.
 
-### Azure DevOps
+### Gitea
 
-- Only Git repositories are supported, not Team Foundation (TFVC).
-- When creating a [personal access token](https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate) for shipper, only the "Code (Read & write)" permission is needed.
-- The author string MUST be in the `John Doe <john.doe@example.com>` format or the commit will ignore it and use the default (i.e. the credentials' owner).
-- You will need both a Project ID (in `org/project` format) and a Repository ID, if you don't know what your Repository ID is, it's probably the Project ID (without the organization). E.g. If your Project ID is `my-org/my-project` and you have only one repository, your Repository ID is `my-project`.
+- Due to how the Commit API is implemented, calling shipper with multiple files will result in a multiple commits, one per modified file.
+
+### GitHub
+
+- When creating a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) for shipper, only the permissions `repo` is needed.
+- The author string MUST be in the `John Doe <john.doe@example.com>` format or the commit will fail.
+- The GitHub Cloud API endpoint is `https://api.github.com`, however GitHub Enterprise Server will have something more akin to `https://HOSTNAME/api/v3`
+- Due to how the Commit API is implemented, calling shipper with multiple files will result in a multiple commits, one per modified file.
+
+### GitLab
+
+- When creating a [project access token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) for shipper, only the permission `api` is needed. (Role depends on your branch permissions, eg. protected branches)
 
 ## Contributing
 
@@ -156,6 +163,7 @@ limitations under the License.
 [karavel container platform]: https://platform.karavel.io
 [helm]: https://helm.sh
 [kustomize]: https://kustomize.io
+[azure devops]: https://azure.microsoft.com/en-us/services/devops/repos/
 [gitlab]: https://gitlab.com
 [github]: https://github.com
 [gitea]: https://gitea.com
