@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"unicode/utf8"
 
 	jsoniter "github.com/json-iterator/go"
+	"github.com/neosperience/shipper/common"
 
 	"github.com/neosperience/shipper/targets"
 )
@@ -62,26 +63,29 @@ type FileInfo struct {
 	CommitID      string `json:"commit_id"`
 }
 
-func (gl *GitlabRepository) Get(path string, ref string) ([]byte, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/projects/%s/repository/files/%s?ref=%s", gl.baseURI, url.PathEscape(gl.projectID), url.PathEscape(path), url.QueryEscape(ref)), nil)
-	if err != nil {
-		return nil, fmt.Errorf("error creating request: %w", err)
+func (gl *GitlabRepository) doRequest(method string, requestURI string, body io.Reader, headers http.Header) (*http.Response, error) {
+	// Add authentication headers
+	if headers == nil {
+		headers = make(http.Header)
 	}
-	req.Header.Set("PRIVATE-TOKEN", gl.privateKey)
+	headers.Set("PRIVATE-TOKEN", gl.privateKey)
 
-	res, err := gl.client.Do(req)
+	return common.HTTPRequest(gl.client, method, requestURI, body, headers)
+}
+
+func (gl *GitlabRepository) Get(path string, ref string) ([]byte, error) {
+	requestURI := fmt.Sprintf("%s/projects/%s/repository/files/%s?ref=%s", gl.baseURI, url.PathEscape(gl.projectID), url.PathEscape(path), url.QueryEscape(ref))
+	res, err := gl.doRequest("GET", requestURI, nil, nil)
 	if err != nil {
-		return nil, fmt.Errorf("error performing request: %w", err)
+		return nil, fmt.Errorf("error retrieving file from GitLab: %w", err)
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode >= 400 {
-		body, _ := ioutil.ReadAll(res.Body)
-		return nil, fmt.Errorf("request returned error: %s", body)
-	}
-
 	var fileinfo FileInfo
-	jsoniter.ConfigFastest.NewDecoder(res.Body).Decode(&fileinfo)
+	err = jsoniter.ConfigFastest.NewDecoder(res.Body).Decode(&fileinfo)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding response: %w", err)
+	}
 
 	switch fileinfo.Encoding {
 	case "text":
@@ -128,23 +132,14 @@ func (gl *GitlabRepository) Commit(payload *targets.CommitPayload) error {
 		return fmt.Errorf("error encoding request payload: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/projects/%s/repository/commits", gl.baseURI, url.PathEscape(gl.projectID)), b)
+	requestURI := fmt.Sprintf("%s/projects/%s/repository/commits", gl.baseURI, url.PathEscape(gl.projectID))
+	res, err := gl.doRequest("POST", requestURI, b, http.Header{
+		"Content-Type": []string{"application/json"},
+	})
 	if err != nil {
-		return fmt.Errorf("error creating request: %w", err)
-	}
-	req.Header.Set("PRIVATE-TOKEN", gl.privateKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	res, err := gl.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("error performing request: %w", err)
+		return fmt.Errorf("error pushing commit to GitLab API: %w", err)
 	}
 	defer res.Body.Close()
-
-	if res.StatusCode >= 400 {
-		body, _ := ioutil.ReadAll(res.Body)
-		return fmt.Errorf("request returned error: %s", body)
-	}
 
 	var response struct {
 		WebURL string `json:"web_url"`
