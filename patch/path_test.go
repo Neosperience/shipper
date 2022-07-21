@@ -3,6 +3,7 @@ package patch
 import (
 	"testing"
 
+	"github.com/neosperience/shipper/test"
 	"gopkg.in/yaml.v3"
 )
 
@@ -17,87 +18,68 @@ func TestSetPathExisting(t *testing.T) {
 		Nested: struct {
 			Value string
 		}{
-			Value: "tochange",
+			Value: "to-change",
 		},
 	}
 
 	byt, err := yaml.Marshal(randomStruct)
-	if err != nil {
-		t.Fatalf("YAML encoding failed: %s", err.Error())
-	}
+	test.MustSucceed(t, err, "YAML encoding failed")
 
-	asMap := make(map[string]interface{})
+	asMap := make(map[string]any)
 	err = yaml.Unmarshal(byt, asMap)
-	if err != nil {
-		t.Fatalf("YAML decoding failed: %s", err.Error())
-	}
+	test.MustSucceed(t, err, "YAML decoding failed")
 
 	// Assert that decoding went fine
-	if asMap["nested"].(map[string]interface{})["value"] != "tochange" {
-		t.Fatal("Expected .Nested.Value value is different")
-	}
+	test.AssertExpected(t, asMap["nested"].(map[string]any)["value"].(string), "to-change", ".Nested.Value value is different than expected (initial value)")
 
 	// Call SetPath on an existing tree
 	err = SetPath(asMap, "nested.value", "changed")
-	if err != nil {
-		t.Fatal(err)
-	}
+	test.MustSucceed(t, err, "Failed to set value")
 
 	// Check that value was changed
-	if asMap["nested"].(map[string]interface{})["value"] != "changed" {
-		t.Fatal("Expected .Nested.Value value is different")
-	}
+	test.AssertExpected(t, asMap["nested"].(map[string]any)["value"].(string), "changed", ".Nested.Value value is different than expected (modified value)")
 
 	// Call SetPath on a new tree
 	err = SetPath(asMap, "nested.other-value", "new-value")
-	if err != nil {
-		t.Fatal(err)
-	}
+	test.MustSucceed(t, err, "Failed to set value")
 
 	// Check that value was changed
-	if asMap["nested"].(map[string]interface{})["other-value"] != "new-value" {
-		t.Fatal("New value not found or different")
-	}
+	test.AssertExpected(t, asMap["nested"].(map[string]any)["other-value"].(string), "new-value", ".Nested.Other-Value value is different than expected (modified value)")
 }
 
 func TestSetPathEmpty(t *testing.T) {
-	asMap := make(map[string]interface{})
+	asMap := make(map[string]any)
 
 	// Call SetPath on an existing tree
 	err := SetPath(asMap, "nested.value", "changed")
-	if err != nil {
-		t.Fatal(err)
-	}
+	test.MustSucceed(t, err, "SetPath should not fail on empty map")
 
 	// Check that value was changed
-	if asMap["nested"].(map[string]interface{})["value"] != "changed" {
-		t.Fatal("Expected .Nested.Value value is different")
-	}
+	test.AssertExpected(t, asMap["nested"].(map[string]any)["value"].(string), "changed", ".Nested.Value value is different than expected")
 }
 
 func TestSetPathInvalid(t *testing.T) {
-	asMap := make(map[string]interface{})
+	asMap := make(map[string]any)
 	asMap["nested"] = 12
 
 	// Call SetPath on an existing tree
 	err := SetPath(asMap, "nested.value", "changed")
-	if err == nil {
-		t.Fatal("expected error but everything went fine")
-	} else {
-		if err != ErrInvalidYAMLStructure {
-			t.Fatalf("unexpected error: %s", err.Error())
-		}
+	switch err {
+	case nil:
+		t.Fatal("SetPath should fail when types don't match")
+	case ErrInvalidYAMLStructure:
+		// OK
+	default:
+		t.Fatalf("Unexpected error: %s", err.Error())
 	}
 }
 
 func BenchmarkSetPath(b *testing.B) {
-	asMap := make(map[string]interface{})
+	asMap := make(map[string]any)
 	err := SetPath(asMap, "nested.value", "new-value")
-	if err != nil {
-		b.Fatal("Failed to set initial value")
-	}
+	test.MustSucceed(b, err, "Failed to set initial value")
 
 	for n := 0; n < b.N; n++ {
-		SetPath(asMap, "nested.value", n)
+		test.MustSucceed(b, SetPath(asMap, "nested.value", n), "Failed to set value")
 	}
 }

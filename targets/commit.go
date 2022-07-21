@@ -2,6 +2,7 @@ package targets
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -63,4 +64,12 @@ func (payload *CommitPayload) SplitAuthor() (string, string) {
 	name, email := payload.Author[:emailSeparator], strings.Trim(payload.Author[emailSeparator:], "<>")
 
 	return strings.TrimSpace(name), strings.TrimSpace(email)
+}
+
+func (payload *CommitPayload) String() string {
+	filelist := ""
+	for name, content := range payload.Files {
+		filelist += fmt.Sprintf("\t%s (%db)\n", name, len(content))
+	}
+	return fmt.Sprintf("Author: %s\nBranch: %s\nMessage: %s\nFiles:\n%s", payload.Author, payload.Branch, payload.Message, filelist)
 }

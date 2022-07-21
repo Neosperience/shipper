@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/neosperience/shipper/targets"
+	"github.com/neosperience/shipper/test"
 )
 
 func TestInMemoryRepository(t *testing.T) {
@@ -16,18 +17,14 @@ func TestInMemoryRepository(t *testing.T) {
 
 	// Get test file
 	data, err := repo.Get("testfile.txt", "dummyref")
-	if err != nil {
-		t.Fatalf("failed to find test file: %s", err.Error())
-	}
+	test.MustSucceed(t, err, "Failed getting test file")
 	if !bytes.Equal(data, store["testfile.txt"]) {
 		t.Fatal("retrieved data for test file doesn't match initial file content")
 	}
 
-	// Check for inexistant entry
+	// Check for non-existent entry
 	_, err = repo.Get("__dummyfile", "dummyref")
-	if err == nil {
-		t.Fatal("found inexistant file")
-	}
+	test.MustFail(t, err, "Expected error when getting non-existent file")
 
 	// Submit new data
 	payload := targets.CommitPayload{
@@ -36,25 +33,18 @@ func TestInMemoryRepository(t *testing.T) {
 			"newfile.txt":  []byte("hello im new"),
 		},
 	}
-	err = repo.Commit(&payload)
-	if err != nil {
-		t.Fatalf("failed to commit test payload: %s", err.Error())
-	}
+	test.MustSucceed(t, repo.Commit(&payload), "Failed committing new data")
 
 	// Retrieve modified file
 	data, err = repo.Get("testfile.txt", "dummyref")
-	if err != nil {
-		t.Fatalf("failed to find test file: %s", err.Error())
-	}
+	test.MustSucceed(t, err, "Failed getting test file")
 	if !bytes.Equal(data, payload.Files["testfile.txt"]) {
 		t.Fatal("retrieved data for test file doesn't match modified file content")
 	}
 
 	// Retrieve new file
 	data, err = repo.Get("newfile.txt", "dummyref")
-	if err != nil {
-		t.Fatalf("failed to find new file: %s", err.Error())
-	}
+	test.MustSucceed(t, err, "Failed getting new file")
 	if !bytes.Equal(data, payload.Files["newfile.txt"]) {
 		t.Fatal("retrieved data for new file doesn't match file content")
 	}

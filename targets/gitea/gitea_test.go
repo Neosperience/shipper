@@ -1,10 +1,9 @@
-package gitlab_target
+package gitea_target
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,6 +16,7 @@ import (
 )
 
 func TestCommit(t *testing.T) {
+	testUser := "test-user"
 	testKey := "test-key"
 	commit := targets.NewPayload("test-branch", "test-author <author@example.com>", "Hello")
 	test.MustSucceed(t, commit.Files.Add(map[string][]byte{
@@ -24,97 +24,89 @@ func TestCommit(t *testing.T) {
 		"binaryfile.jpg": {0xff, 0xd8, 0xff, 0xe0},
 	}), "Failed adding test files")
 
+	hashes := map[string]string{
+		"textfile.txt": "testsha",
+	}
+
 	// Setup test HTTP server/client
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		// Check authorization key
-		token := req.Header.Get("PRIVATE-TOKEN")
-		if token != testKey {
-			t.Fatalf("Expected '%s' as PRIVATE-TOKEN, got '%s'", testKey, token)
+		user, key, ok := req.BasicAuth()
+		if !ok {
+			t.Fatal("Invalid or empty HTTP Basic auth header received")
 		}
+		test.AssertExpected(t, user, testUser, "Basic auth user doesn't match expected value")
+		test.AssertExpected(t, key, testKey, "Basic auth password doesn't match expected value")
 
-		// Decode payload
-		var payload CommitPostData
-		err := jsoniter.ConfigFastest.NewDecoder(req.Body).Decode(&payload)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer req.Body.Close()
+		parts := strings.Split(req.URL.Path, "/")
+		file := parts[len(parts)-1]
 
-		// Make sure files have been encoded with the most efficient encoding
-		for _, action := range payload.Actions {
-			switch action.FilePath {
-			case "textfile.txt":
-				entry := commit.Files[action.FilePath]
-				if action.Encoding != "text" {
-					t.Error("text file has not been encoded with text encoding")
-				}
-				if action.Content != string(entry) {
-					t.Error("text file content doesnt match")
-				}
-			case "binaryfile.jpg":
-				entry := commit.Files[action.FilePath]
-				if action.Encoding != "base64" {
-					t.Error("binary file has not been encoded with b64 encoding")
-				}
-				if action.Content != base64.StdEncoding.EncodeToString(entry) {
-					t.Error("binary file content doesnt match")
-				}
+		// If GET-ting, we're asking for the file info
+		if req.Method == http.MethodGet {
+			sha, ok := hashes[file]
+			if !ok {
+				http.Error(rw, "not found", http.StatusNotFound)
+				return
 			}
+
+			test.MustSucceed(t, jsoniter.ConfigFastest.NewEncoder(rw).Encode(struct {
+				SHA string `json:"sha"`
+			}{
+				SHA: sha,
+			}), "Failed sending SHA info")
+			return
 		}
-		_ = jsoniter.ConfigFastest.NewEncoder(rw).Encode(struct {
-			WebURL string `json:"web_url"`
+
+		// Must be put PUT-ting
+		var payload CommitData
+		test.MustSucceed(t, jsoniter.ConfigFastest.NewDecoder(req.Body).Decode(&payload), "Failed decoding payload")
+
+		byt, err := base64.StdEncoding.DecodeString(payload.Content)
+		test.MustSucceed(t, err, "Failed decoding base64-encoded content")
+		if !bytes.Equal(byt, commit.Files[file]) {
+			t.Fatal("Decoded file content doesn't match expected")
+		}
+
+		test.MustSucceed(t, jsoniter.ConfigFastest.NewEncoder(rw).Encode(struct {
+			Commit any `json:"commit"`
 		}{
-			WebURL: "https://gitlab.com/path/to/test-project/blob/main/path/to/test-key",
-		})
+			Commit: struct {
+				HTMLURL string `json:"html_url"`
+			}{
+				HTMLURL: "https://github.com/test-user/test-repo/commit/testsha",
+			},
+		}), "Failed sending commit info")
 	}))
 	defer server.Close()
-	target := NewAPIClient(server.URL, "test-project", testKey)
+	target := NewAPIClient(server.URL, "test-project", fmt.Sprintf("%s:%s", testUser, testKey))
 	target.client = server.Client()
 
-	if err := target.Commit(commit); err != nil {
-		t.Fatal(err.Error())
-	}
+	test.MustSucceed(t, target.Commit(commit), "Failed committing files")
 }
 
 func TestGet(t *testing.T) {
-	testKey := "path/to/test-key"
+	testUser := "test-user"
+	testKey := "test-key"
 	testData := []byte("hello test here")
-	testDataHash := sha256.Sum256(testData)
 
 	// Setup test HTTP server/client
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		// Check authorization key
-		token := req.Header.Get("PRIVATE-TOKEN")
-		if token != testKey {
-			t.Fatalf("Expected '%s' as PRIVATE-TOKEN, got '%s'", testKey, token)
+		user, key, ok := req.BasicAuth()
+		if !ok {
+			t.Fatal("Invalid or empty HTTP Basic auth header received")
 		}
+		test.AssertExpected(t, user, testUser, "Basic auth user doesn't match expected value")
+		test.AssertExpected(t, key, testKey, "Basic auth password doesn't match expected value")
 
-		parts := strings.Split(testKey, "/")
-		baseKey := parts[len(parts)-1]
-
-		err := jsoniter.ConfigFastest.NewEncoder(rw).Encode(FileInfo{
-			FileName:      baseKey,
-			FilePath:      testKey,
-			Size:          len(testData),
-			Encoding:      "base64",
-			Content:       base64.StdEncoding.EncodeToString(testData),
-			ContentSha256: hex.EncodeToString(testDataHash[:]),
-			Ref:           "main",
-			BlobID:        "somerandomid",
-			CommitID:      "someotherid",
-		})
-		if err != nil {
-			t.Fatalf("Failed encoding response: %s", err.Error())
-		}
+		rw.Write(testData)
 	}))
 	defer server.Close()
-	target := NewAPIClient(server.URL, "test-project", testKey)
+	target := NewAPIClient(server.URL, "test-project", fmt.Sprintf("%s:%s", testUser, testKey))
 	target.client = server.Client()
 
 	byt, err := target.Get(testKey, "main")
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	test.MustSucceed(t, err, "Failed getting file")
 	if !bytes.Equal(byt, testData) {
 		t.Fatal("Expected file content is different from retrieved")
 	}
@@ -127,6 +119,9 @@ func TestFaultyServer(t *testing.T) {
 	}))
 	defer server.Close()
 	payload := targets.NewPayload("test-branch", "test-author <author@example.com>", "Hello")
+	test.MustSucceed(t, payload.Files.Add(map[string][]byte{
+		"textfile.txt": []byte("test file"),
+	}), "Failed adding test file")
 
 	// Test with erroring server
 	target := NewAPIClient(server.URL, "test-project", "unused")

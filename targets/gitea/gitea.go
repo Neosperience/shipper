@@ -1,4 +1,4 @@
-package github_target
+package gitea_target
 
 import (
 	"bytes"
@@ -16,8 +16,8 @@ import (
 	"github.com/neosperience/shipper/targets"
 )
 
-// GithubRepository commits to a GitHub repository using the GitHub REST Commits APIs
-type GithubRepository struct {
+// GiteaRepository commits to a Gitea repository using the Gitea REST Commits APIs
+type GiteaRepository struct {
 	baseURI     string
 	projectID   string
 	credentials string
@@ -25,10 +25,10 @@ type GithubRepository struct {
 	client *http.Client
 }
 
-// NewAPIClient creates a GithubRepository instance
-func NewAPIClient(uri string, projectID string, credentials string) *GithubRepository {
+// NewAPIClient creates a GiteaRepository instance
+func NewAPIClient(uri string, projectID string, credentials string) *GiteaRepository {
 	var client = &http.Client{}
-	return &GithubRepository{
+	return &GiteaRepository{
 		baseURI:     uri,
 		projectID:   projectID,
 		credentials: credentials,
@@ -36,36 +36,32 @@ func NewAPIClient(uri string, projectID string, credentials string) *GithubRepos
 	}
 }
 
-func (gh *GithubRepository) doRequest(method string, requestURI string, body io.Reader, headers http.Header) (*http.Response, error) {
+func (ge *GiteaRepository) doRequest(method string, requestURI string, body io.Reader, headers http.Header) (*http.Response, error) {
 	// Add authentication headers
 	if headers == nil {
 		headers = make(http.Header)
 	}
-	headers.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(gh.credentials)))
+	headers.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(ge.credentials)))
 
-	return common.HTTPRequest(gh.client, method, requestURI, body, headers)
+	return common.HTTPRequest(ge.client, method, requestURI, body, headers)
 }
 
-func (gh *GithubRepository) Get(path string, ref string) ([]byte, error) {
-	requestURI := fmt.Sprintf("%s/repos/%s/contents/%s?ref=%s", gh.baseURI, gh.projectID, path, url.QueryEscape(ref))
-	res, err := gh.doRequest("GET", requestURI, nil, http.Header{
-		"Accept": {"application/vnd.github.v3.raw"},
-	})
+func (ge *GiteaRepository) Get(path string, ref string) ([]byte, error) {
+	requestURI := fmt.Sprintf("%s/repos/%s/raw/%s?ref=%s", ge.baseURI, ge.projectID, path, url.QueryEscape(ref))
+	res, err := ge.doRequest("GET", requestURI, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error getting file: %w", err)
 	}
-
 	defer res.Body.Close()
+
 	return ioutil.ReadAll(res.Body)
 }
 
-func (gh *GithubRepository) getFileSHA(path, branch string) (string, bool, error) {
-	requestURI := fmt.Sprintf("%s/repos/%s/contents/%s?ref=%s", gh.baseURI, gh.projectID, path, url.QueryEscape(branch))
-	res, err := gh.doRequest("GET", requestURI, nil, http.Header{
-		"Accept": {"application/vnd.github.v3+json"},
-	})
+func (ge *GiteaRepository) getFileSHA(path, branch string) (string, bool, error) {
+	requestURI := fmt.Sprintf("%s/repos/%s/contents/%s?ref=%s", ge.baseURI, ge.projectID, path, url.QueryEscape(branch))
+	res, err := ge.doRequest("GET", requestURI, nil, nil)
 	if err != nil && !isNotFound(res) {
-		return "", false, fmt.Errorf("error getting file SHA: %w", err)
+		return "", false, fmt.Errorf("error getting file SHA from server: %w", err)
 	}
 
 	// File not found, file does not exist
@@ -92,16 +88,16 @@ type CommitDataAuthor struct {
 }
 
 type CommitData struct {
-	Message   string           `json:"message"`
-	Content   string           `json:"content"`
-	Branch    string           `json:"branch"`
-	SHA       string           `json:"sha,omitempty"`
-	Committer CommitDataAuthor `json:"committer"`
+	Message string           `json:"message"`
+	Content string           `json:"content"`
+	Branch  string           `json:"branch"`
+	SHA     string           `json:"sha,omitempty"`
+	Author  CommitDataAuthor `json:"author"`
 }
 
-func (gh *GithubRepository) commitSingle(path string, commitData CommitData) error {
+func (ge *GiteaRepository) commitSingle(path string, commitData CommitData) error {
 	// Get original file, if exists, for the original file's SHA
-	sha, _, err := gh.getFileSHA(path, commitData.Branch)
+	sha, _, err := ge.getFileSHA(path, commitData.Branch)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve file SHA: %w", err)
 	}
@@ -113,13 +109,12 @@ func (gh *GithubRepository) commitSingle(path string, commitData CommitData) err
 		return fmt.Errorf("failed to encode commit payload: %w", err)
 	}
 
-	requestURI := fmt.Sprintf("%s/repos/%s/contents/%s", gh.baseURI, gh.projectID, path)
-	res, err := gh.doRequest("PUT", requestURI, b, http.Header{
-		"Content-Type": {"application/json"},
-		"Accept":       {"application/vnd.github.v3+json"},
+	putURI := fmt.Sprintf("%s/repos/%s/contents/%s", ge.baseURI, ge.projectID, path)
+	res, err := ge.doRequest("PUT", putURI, b, http.Header{
+		"Content-Type": []string{"application/json"},
 	})
 	if err != nil {
-		return fmt.Errorf("error pushing file to GitHub API: %w", err)
+		return fmt.Errorf("error performing request: %w", err)
 	}
 	defer res.Body.Close()
 
@@ -137,7 +132,7 @@ func (gh *GithubRepository) commitSingle(path string, commitData CommitData) err
 	return nil
 }
 
-func (gh *GithubRepository) Commit(payload *targets.CommitPayload) error {
+func (ge *GiteaRepository) Commit(payload *targets.CommitPayload) error {
 	author, email := payload.SplitAuthor()
 	commitAuthor := CommitDataAuthor{
 		Name:  author,
@@ -150,15 +145,14 @@ func (gh *GithubRepository) Commit(payload *targets.CommitPayload) error {
 		if multipleFiles {
 			message = fmt.Sprintf("%s: %s", payload.Message, path)
 		}
-
-		err := gh.commitSingle(path, CommitData{
-			Branch:    payload.Branch,
-			Message:   message,
-			Committer: commitAuthor,
-			Content:   base64.StdEncoding.EncodeToString(file),
+		err := ge.commitSingle(path, CommitData{
+			Branch:  payload.Branch,
+			Message: message,
+			Author:  commitAuthor,
+			Content: base64.StdEncoding.EncodeToString(file),
 		})
 		if err != nil {
-			return fmt.Errorf("failed to commit file %s: %w", path, err)
+			return fmt.Errorf("error committing file %s: %w", path, err)
 		}
 	}
 

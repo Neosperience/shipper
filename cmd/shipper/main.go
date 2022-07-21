@@ -1,21 +1,38 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/neosperience/shipper/targets"
+	azure_target "github.com/neosperience/shipper/targets/azure"
 	bitbucket_target "github.com/neosperience/shipper/targets/bitbucket"
+	gitea_target "github.com/neosperience/shipper/targets/gitea"
 	github_target "github.com/neosperience/shipper/targets/github"
 	gitlab_target "github.com/neosperience/shipper/targets/gitlab"
 	helm_templater "github.com/neosperience/shipper/templater/helm"
+	json_templater "github.com/neosperience/shipper/templater/json"
 	kustomize_templater "github.com/neosperience/shipper/templater/kustomize"
+	"github.com/urfave/cli/v2"
 )
 
+func oneOrMany[T any](arr []T, index int) T {
+	if len(arr) == 1 {
+		return arr[0]
+	}
+	return arr[index]
+}
+
 func app(c *cli.Context) error {
+	// Modify default HTTP client transport to not check for certificates if asked to do so
+	insecureCert := c.Bool("no-verify-tls")
+	if insecureCert {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
 	// Create payload
 	payload := targets.NewPayload(c.String("repo-branch"), c.String("commit-author"), c.String("commit-message"))
 
@@ -42,54 +59,122 @@ func app(c *cli.Context) error {
 		assert(project != "", "GitHub project ID must be specified when using GitHub")
 
 		apikey := c.String("github-key")
-		assert(apikey != "", "GitHub API key must be specified when using GitHub")
+		assert(apikey != "", "GitHub credentials must be specified when using GitHub")
 
 		repository = github_target.NewAPIClient(uri, project, apikey)
+	case "gitea":
+		uri := c.String("gitea-endpoint")
+		assert(uri != "", "Gitea endpoint must be specified when using Gitea")
+
+		project := c.String("gitea-project")
+		assert(project != "", "Gitea project ID must be specified when using Gitea")
+
+		apikey := c.String("gitea-key")
+		assert(apikey != "", "Gitea credentials must be specified when using Gitea")
+
+		repository = gitea_target.NewAPIClient(uri, project, apikey)
 	case "bitbucket-cloud":
-		creds := c.String("bitbucket-key")
-		assert(creds != "", "Bitbucket cloud credentials must be specified when using Bitbucket cloud")
+		credentials := c.String("bitbucket-key")
+		assert(credentials != "", "Bitbucket cloud credentials must be specified when using Bitbucket cloud")
 
 		project := c.String("bitbucket-project")
 		assert(project != "", "Bitbucket project path must be specified when using Bitbucket cloud")
 
-		repository = bitbucket_target.NewCloudAPIClient(project, creds)
+		repository = bitbucket_target.NewCloudAPIClient(project, credentials)
+	case "azure":
+		credentials := c.String("azure-key")
+		assert(credentials != "", "Azure credentials must be specified when using Azure")
+
+		projectID := c.String("azure-project-id")
+		assert(projectID != "", "Azure DevOps Project ID must be specified when using Azure")
+
+		repositoryID := c.String("azure-repository-id")
+		assert(repositoryID != "", "Azure DevOps repository ID must be specified when using Azure")
+
+		repository = azure_target.NewAPIClient(projectID, repositoryID, credentials)
 	default:
 		return fmt.Errorf("repository option not supported: %s", target)
 	}
 
 	// Get provider to use
 	templater := c.String("templater")
+	branch := c.String("repo-branch")
+
+	images := c.StringSlice("container-image")
+	tags := c.StringSlice("container-tag")
+	assert(len(images) == len(tags), "An equal number of --container-image and --container-tag must be specified")
+
 	switch templater {
 	case "helm":
-		valuesFile := c.String("helm-values-file")
-		assert(valuesFile != "", "values.yaml path must be specified when using Helm")
+		valuesFile := c.StringSlice("helm-values-file")
+		assert(valuesFile != nil && len(valuesFile) > 0, "values.yaml path must be specified when using Helm")
+		imagePaths := c.StringSlice("helm-image-path")
+		tagPaths := c.StringSlice("helm-tag-path")
 
-		newfiles, err := helm_templater.UpdateHelmChart(repository, helm_templater.HelmProviderOptions{
-			ValuesFile: valuesFile,
-			Ref:        c.String("repo-branch"),
-			Image:      c.String("container-image"),
-			ImagePath:  c.String("helm-image-path"),
-			Tag:        c.String("container-tag"),
-			TagPath:    c.String("helm-tag-path"),
+		assert(len(tagPaths) == len(imagePaths), "An equal number of --helm-image-path and --helm-tag-path must be specified")
+		assert(len(imagePaths) == 1 || len(imagePaths) == len(images), "There can on be either one global --helm-image-path or one per each --container-image")
+
+		updates := make([]helm_templater.HelmUpdate, len(images))
+		for index := 0; index < len(images); index += 1 {
+			updates[index] = helm_templater.HelmUpdate{
+				ValuesFile: oneOrMany(valuesFile, index),
+				Image:      oneOrMany(images, index),
+				Tag:        oneOrMany(tags, index),
+				ImagePath:  oneOrMany(imagePaths, index),
+				TagPath:    oneOrMany(tagPaths, index),
+			}
+		}
+
+		newFiles, err := helm_templater.UpdateHelmChart(repository, helm_templater.HelmProviderOptions{
+			Ref:     branch,
+			Updates: updates,
 		})
 		if err != nil {
 			return err
 		}
-		payload.Files.Add(newfiles)
+		_ = payload.Files.Add(newFiles)
 	case "kustomize":
-		kustomizationFile := c.String("kustomize-file")
-		assert(kustomizationFile != "", "kustomization.yaml path must be specified when using Kustomize")
+		kustomizationFiles := c.StringSlice("kustomize-file")
+		assert(kustomizationFiles != nil && len(kustomizationFiles) > 0, "kustomization.yaml path must be specified when using Kustomize")
 
-		newfiles, err := kustomize_templater.UpdateKustomization(repository, kustomize_templater.KustomizeProviderOptions{
-			KustomizationFile: kustomizationFile,
-			Ref:               c.String("repo-branch"),
-			Image:             c.String("container-image"),
-			NewTag:            c.String("container-tag"),
+		updates := make([]kustomize_templater.KustomizeUpdate, len(images))
+		for index := 0; index < len(images); index += 1 {
+			updates[index] = kustomize_templater.KustomizeUpdate{
+				KustomizationFile: oneOrMany(kustomizationFiles, index),
+				Image:             oneOrMany(images, index),
+				NewTag:            oneOrMany(tags, index),
+			}
+		}
+
+		newFiles, err := kustomize_templater.UpdateKustomization(repository, kustomize_templater.KustomizeProviderOptions{
+			Ref:     branch,
+			Updates: updates,
 		})
 		if err != nil {
 			return err
 		}
-		payload.Files.Add(newfiles)
+		_ = payload.Files.Add(newFiles)
+	case "json":
+		jsonFiles := c.StringSlice("json-file")
+		assert(jsonFiles != nil && len(jsonFiles) > 0, "At least one JSON file path must be specified when using JSON")
+
+		updates := make([]json_templater.FileUpdate, len(images))
+		for index := 0; index < len(images); index += 1 {
+			updates[index] = json_templater.FileUpdate{
+				File: oneOrMany(jsonFiles, index),
+				Path: oneOrMany(images, index),
+				Tag:  oneOrMany(tags, index),
+			}
+		}
+
+		newFiles, err := json_templater.UpdateJSONFile(repository, json_templater.JSONProviderOptions{
+			Ref:     branch,
+			Updates: updates,
+		})
+		if err != nil {
+			return err
+		}
+		_ = payload.Files.Add(newFiles)
 	default:
 		return fmt.Errorf("templater option not supported: %s", templater)
 	}
@@ -98,6 +183,8 @@ func app(c *cli.Context) error {
 		log.Println("no changes to commit, exiting")
 		return nil
 	}
+
+	log.Printf("Pushing changes\n%s", payload)
 
 	return repository.Commit(payload)
 }
@@ -109,7 +196,7 @@ func main() {
 			&cli.StringFlag{
 				Name:     "templater",
 				Aliases:  []string{"p"},
-				Usage:    "Template system (available: \"helm\", \"kustomize\")",
+				Usage:    `Template system (available: "helm", "kustomize", "json")`,
 				EnvVars:  []string{"SHIPPER_PROVIDER"},
 				Required: true,
 			},
@@ -117,7 +204,7 @@ func main() {
 				Name:     "repo-kind",
 				Aliases:  []string{"t"},
 				Value:    "gitlab",
-				Usage:    "Repository type (available: \"gitlab\", \"github\", \"bitbucket-cloud\")",
+				Usage:    `Repository type (available: "gitlab", "github", "gitea", "bitbucket-cloud", "azure")`,
 				EnvVars:  []string{"SHIPPER_REPO_KIND"},
 				Required: true,
 			},
@@ -142,47 +229,60 @@ func main() {
 				EnvVars: []string{"SHIPPER_COMMIT_MESSAGE"},
 				Value:   "Deploy",
 			},
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:     "container-image",
 				Aliases:  []string{"ci"},
 				Usage:    "Container image",
-				EnvVars:  []string{"SHIPPER_CONTAINER_IMAGE"},
+				EnvVars:  []string{"SHIPPER_CONTAINER_IMAGE", "SHIPPER_CONTAINER_IMAGES"},
 				Required: true,
 			},
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:     "container-tag",
 				Aliases:  []string{"ct"},
 				Usage:    "Container tag",
-				EnvVars:  []string{"SHIPPER_CONTAINER_TAG"},
+				EnvVars:  []string{"SHIPPER_CONTAINER_TAG", "SHIPPER_CONTAINER_TAGS"},
 				Required: true,
 			},
+			&cli.BoolFlag{
+				Name:    "no-verify-tls",
+				Usage:   "If provided, skip X.509 certificate validation on HTTPS requests",
+				EnvVars: []string{"SHIPPER_NO_VERIFY_TLS"},
+				Value:   false,
+			},
 			// Helm options
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:    "helm-values-file",
 				Aliases: []string{"hpath"},
 				Usage:   "[helm] Path to values.yaml file",
-				EnvVars: []string{"SHIPPER_HELM_VALUES_FILE"},
+				EnvVars: []string{"SHIPPER_HELM_VALUES_FILE", "SHIPPER_HELM_VALUES_FILES"},
 			},
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:    "helm-image-path",
 				Aliases: []string{"himg"},
 				Usage:   "[helm] Container image path",
-				EnvVars: []string{"SHIPPER_HELM_IMAGE_PATH"},
-				Value:   "image.repository",
+				EnvVars: []string{"SHIPPER_HELM_IMAGE_PATH", "SHIPPER_HELM_IMAGE_PATHS"},
+				Value:   cli.NewStringSlice("image.repository"),
 			},
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:    "helm-tag-path",
 				Aliases: []string{"htag"},
 				Usage:   "[helm] Container tag path",
-				EnvVars: []string{"SHIPPER_HELM_TAG_PATH"},
-				Value:   "image.tag",
+				EnvVars: []string{"SHIPPER_HELM_TAG_PATH", "SHIPPER_HELM_TAG_PATHS"},
+				Value:   cli.NewStringSlice("image.tag"),
 			},
 			// Kustomize options
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:    "kustomize-file",
 				Aliases: []string{"kfile"},
 				Usage:   "[kustomize] Path to kustomization.yaml file",
-				EnvVars: []string{"SHIPPER_KUSTOMIZE_FILE"},
+				EnvVars: []string{"SHIPPER_KUSTOMIZE_FILE", "SHIPPER_KUSTOMIZE_FILES"},
+			},
+			// JSON options
+			&cli.StringSliceFlag{
+				Name:    "json-file",
+				Aliases: []string{"jfile"},
+				Usage:   "[json] Path to JSON file",
+				EnvVars: []string{"SHIPPER_JSON_FILE", "SHIPPER_JSON_FILES"},
 			},
 			// Gitlab options
 			&cli.StringFlag{
@@ -224,6 +324,25 @@ func main() {
 				Usage:   "[github] Project ID in \"org/project\" format",
 				EnvVars: []string{"SHIPPER_GITHUB_PROJECT"},
 			},
+			// Gitea options
+			&cli.StringFlag{
+				Name:    "gitea-endpoint",
+				Aliases: []string{"ge-uri"},
+				Usage:   "[gitea] Gitea API endpoint (include \"/api/v1\")",
+				EnvVars: []string{"SHIPPER_GITEA_ENDPOINT"},
+			},
+			&cli.StringFlag{
+				Name:    "gitea-key",
+				Aliases: []string{"ge-key"},
+				Usage:   "[gitea] Username/application token pair in \"username:token\" format",
+				EnvVars: []string{"SHIPPER_GITEA_KEY"},
+			},
+			&cli.StringFlag{
+				Name:    "gitea-project",
+				Aliases: []string{"ge-pid"},
+				Usage:   "[gitea] Project ID in \"org/project\" format",
+				EnvVars: []string{"SHIPPER_GITEA_PROJECT"},
+			},
 			// Bitbucket options
 			&cli.StringFlag{
 				Name:    "bitbucket-key",
@@ -237,6 +356,25 @@ func main() {
 				Usage:   "[bitbucket-cloud] Project path in \"org/project\" format",
 				EnvVars: []string{"SHIPPER_GITLAB_PROJECT"},
 			},
+			// Azure DevOps options
+			&cli.StringFlag{
+				Name:    "azure-project-id",
+				Aliases: []string{"az-pid"},
+				Usage:   "[azure-devops] Organization and Project ID, in \"org/project\" format",
+				EnvVars: []string{"SHIPPER_AZURE_PROJECT_ID"},
+			},
+			&cli.StringFlag{
+				Name:    "azure-repository-id",
+				Aliases: []string{"az-rid"},
+				Usage:   "[azure-devops] Repository ID (if unsure, use the project ID)",
+				EnvVars: []string{"SHIPPER_AZURE_REPOSITORY_ID"},
+			},
+			&cli.StringFlag{
+				Name:    "azure-key",
+				Aliases: []string{"az-key"},
+				Usage:   "[azure-devops] Username/application token pair in \"username:token\" format",
+				EnvVars: []string{"SHIPPER_AZURE_KEY"},
+			},
 		},
 		Action: app,
 	}
@@ -244,14 +382,14 @@ func main() {
 	check(app.Run(os.Args), "Fatal error")
 }
 
-func check(err error, format string, args ...interface{}) {
+func check(err error, format string, args ...any) {
 	if err != nil {
 		args = append(args, err.Error())
 		log.Fatalf(format+": %s", args...)
 	}
 }
 
-func assert(cond bool, format string, args ...interface{}) {
+func assert(cond bool, format string, args ...any) {
 	if !cond {
 		log.Fatalf(format, args...)
 	}
