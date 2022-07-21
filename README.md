@@ -27,6 +27,39 @@ Shipper automates this by leveraging the native Git provider API (e.g. GitLab, G
 
 ## Usage
 
+```
+NAME:
+   shipper - A new cli application
+
+USAGE:
+   shipper [global options] command [command options] [arguments...]
+
+COMMANDS:
+   help, h  Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --templater value, -p value                Template system (available: "helm", "kustomize") [$SHIPPER_PROVIDER]
+   --repo-kind value, -t value                Repository type (available: "gitlab", "github", "bitbucket-cloud") (default: "gitlab") [$SHIPPER_REPO_KIND]
+   --repo-branch value, -b value              Repository branch [$SHIPPER_REPO_BRANCH]
+   --commit-author value, -a value            Commit author in "name <email>" format (default: "Shipper agent <shipper@example.com>") [$SHIPPER_COMMIT_AUTHOR]
+   --commit-message value, -m value           Commit message (default: "Deploy") [$SHIPPER_COMMIT_MESSAGE]
+   --container-image value, --ci value        Container image [$SHIPPER_CONTAINER_IMAGE]
+   --container-tag value, --ct value          Container tag [$SHIPPER_CONTAINER_TAG]
+   --helm-values-file value, --hpath value    [helm] Path to values.yaml file [$SHIPPER_HELM_VALUES_FILE]
+   --helm-image-path value, --himg value      [helm] Container image path (default: "image.repository") [$SHIPPER_HELM_IMAGE_PATH]
+   --helm-tag-path value, --htag value        [helm] Container tag path (default: "image.tag") [$SHIPPER_HELM_TAG_PATH]
+   --kustomize-file value, --kfile value      [kustomize] Path to kustomization.yaml file [$SHIPPER_KUSTOMIZE_FILE]
+   --gitlab-endpoint value, --gl-uri value    [gitlab] Gitlab API endpoint, including "/api/v4" (default: "https://gitlab.com/api/v4") [$SHIPPER_GITLAB_ENDPOINT]
+   --gitlab-key value, --gl-key value         [gitlab] A valid API key with commit access [$SHIPPER_GITLAB_KEY]
+   --gitlab-project value, --gl-pid value     [gitlab] Project ID in "org/project" format [$SHIPPER_GITLAB_PROJECT]
+   --github-endpoint value, --gh-uri value    [github] GitHub API endpoint (include "/api/v3" if using Enterprise Server) (default: "https://api.github.com") [$SHIPPER_GITHUB_ENDPOINT]
+   --github-key value, --gh-key value         [github] Username/password pair in "username:password" format (use a personal access token!) [$SHIPPER_GITHUB_KEY]
+   --github-project value, --gh-pid value     [github] Project ID in "org/project" format [$SHIPPER_GITHUB_PROJECT]
+   --bitbucket-key value, --bb-key value      [bitbucket-cloud] Username/password pair in "username:password" format (use app passwords!) [$SHIPPER_GITLAB_KEY]
+   --bitbucket-project value, --bb-pid value  [bitbucket-cloud] Project path in "org/project" format [$SHIPPER_GITLAB_PROJECT]
+   --help, -h                                 show help (default: false)
+```
+
 The main use-case for Shipper is to be used as a CI pipeline step. In container-based CI systems like GitLab CI, GitHub Actions and alike, you can run the [official container image](https://github.com/Neosperience/shipper/pkgs/container/shipper) in a step and invoke shipper with the appropriate flags.
 
 ### GitLab CI
