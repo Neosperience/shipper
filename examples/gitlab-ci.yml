@@ -1,0 +1,18 @@
+deploy-prod:
+  image: ghcr.io/neosperience/shipper:main
+  environment: prod
+  script:
+    - |
+      shipper --templater helm \
+        --repo-kind gitlab \
+        --repo-branch main \
+        --commit-author "$GITLAB_USER_NAME <$GITLAB_USER_EMAIL>" \
+        --commit-message "Deploy new version" \
+        --container-image $CI_REGISTRY_IMAGE \
+        --container-tag  $CI_COMMIT_SHA \
+        --helm-values-file path/to/values.yaml \
+        --helm-image-path image.repository \
+        --helm-tag-path image.tag \
+        --gitlab-endpoint $CI_API_V4_URL \
+        --gitlab-key $CI_JOB_TOKEN" \
+        --gitlab-project $CI_PROJECT_NAMESPACE/deployments

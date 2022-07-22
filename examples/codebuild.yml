@@ -1,0 +1,27 @@
+# This is an example buildspec for AWS CodeBuild
+version: "0.2"
+phases:
+  install:
+    commands:
+      - mkdir shipper && curl -L https://github.com/Neosperience/shipper/releases/download/1.0.0/shipper_1.0.0_Linux_amd64.tar.gz | tar -xz -C shipper/
+      - aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin $REPOSITORY_URI
+  pre_build:
+    commands:
+      - export TAG=$CODEBUILD_RESOLVED_SOURCE_VERSION
+  build:
+    commands:
+      - docker build . -t $REPOSITORY_URI:$TAG
+      - docker push $REPOSITORY_URI:$TAG
+  post_build:
+    commands:
+      - |
+        shipper/shipper --templater kustomize \
+          --repo-kind github \
+          --repo-branch main \
+          --commit-author "$GITHUB_USER_NAME <$GITHUB_USER_EMAIL>" \
+          --commit-message "Deploy new version" \
+          --github-key $GITHUB_TOKEN \
+          --github-project $GITHUB_PROJECT \
+          --kustomize-file path/to/kustomization.yml \
+          --container-image $REPOSITORY_URI \
+          --container-tag $TAG

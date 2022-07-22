@@ -73,28 +73,10 @@ GLOBAL OPTIONS:
 
 The main use-case for Shipper is to be used as a CI pipeline step. In container-based CI systems like GitLab CI, GitHub Actions and alike, you can run the [official container image](https://github.com/Neosperience/shipper/pkgs/container/shipper) in a step and invoke shipper with the appropriate flags.
 
-### GitLab CI
+### Examples
 
-```yaml
-deploy-prod:
-  image: ghcr.io/neosperience/shipper:main
-  environment: prod
-  script:
-    - |
-      shipper --templater helm \
-        --repo-kind gitlab \
-        --repo-branch main \
-        --commit-author "$GITLAB_USER_NAME <$GITLAB_USER_EMAIL>" \
-        --commit-message "Deploy new version" \
-        --container-image $CI_REGISTRY_IMAGE \
-        --container-tag  $CI_COMMIT_SHA \
-        --helm-values-file prod/values.yaml \
-        --helm-image-path image.repository \
-        --helm-tag-path image.tag \
-        --gitlab-endpoint $CI_API_V4_URL \
-        --gitlab-key $CI_JOB_TOKEN" \
-        --gitlab-project my-app/deployments
-```
+Examples for various CI systems can be found in the [examples folder](./examples). Please feel free to submit new examples if you have them!
+
 
 ### Updating multiple images at once
 

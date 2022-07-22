@@ -1,0 +1,21 @@
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/neosperience/shipper:main
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+         shipper/shipper --templater kustomize \
+          --repo-kind github \
+          --repo-branch main \
+          --commit-author "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>" \
+          --commit-message "Deploy new version" \
+          --github-key $GITHUB_TOKEN \
+          --github-project $GITHUB_PROJECT \
+          --kustomize-file path/to/kustomization.yml \
+          --container-image $REPOSITORY_URI \
+          --container-tag $GITHUB_SHA
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+     
