@@ -6,7 +6,7 @@
 
 **Ship your apps the GitOps way!**
 
-Shipper is a CLI tool that automates deploying new versions of containerized applications to GitOps repository managed by tools such as [ArgoCD]. Deploying such applications usually means updating a configuration file in a Git repository and writing the newly built container image tag. This file is then read by the CD tool, processed using a templater and then syncronized with a remote infrastructure environment where the application is actually deployed.
+Shipper is a CLI tool that automates deploying new versions of containerized applications to GitOps repository managed by tools such as [ArgoCD]. Deploying such applications usually means updating a configuration file in a Git repository and writing the newly built container image tag. This file is then read by the CD tool, processed using a templater and then synchronized with a remote infrastructure environment where the application is actually deployed.
 
 A practical example in [Neosperience]: applications deployed on instances of the [Karavel Container Platform], which uses ArgoCD to monitor deployment configurations. To deploy a new image tag, a commit must be performed against either a [Helm] `values.yaml` file, or a [Kustomize] `kustomization.yaml` file setting a YAML key to the new value.
 
@@ -19,7 +19,7 @@ Shipper automates this by leveraging the native Git provider API (e.g. GitLab, G
 - [Azure DevOps]
 - [BitBucket] (only BitBucket cloud ie. bitbucket.org)
 - [Gitea]
-- [GitHub] (both GitHub.com and GitHub Enteprise Server)
+- [GitHub] (both GitHub.com and GitHub Enterprise Server)
 - [GitLab] (both self-managed and gitlab.com)
 
 ### Templaters
